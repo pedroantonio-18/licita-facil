@@ -1,4 +1,17 @@
 services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: frontend:latest
+    container_name: frontend
+    ports:
+      - "3000:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html
+    depends_on:
+      - pdf-service
+
   pdf-service:
     build:
       context: ./pdf-service
