@@ -1,0 +1,16 @@
+services:
+  pdf-service:
+    build:
+      context: ./pdf-service
+      dockerfile: Dockerfile
+    image: pdf-service:latest
+    container_name: pdf-service
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./pdf-service:/usr/src/app
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+    working_dir: /usr/src/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
