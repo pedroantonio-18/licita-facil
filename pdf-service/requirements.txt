@@ -1,0 +1,12 @@
+fastapi==0.110.0
+uvicorn[standard]==0.28.0
+pydantic-settings==2.2.1
+
+python-multipart==0.0.9
+
+pypdf==4.1.0
+
+pdfplumber==0.11.0
+
+pandas==2.2.1
+openpyxl==3.1.2
