@@ -1,5 +1,6 @@
 from fastapi import FastAPI
-from routers import merger
+from routers import merger, compressor
+
 
 app = FastAPI(
     title="LcitaFácil PDF Service",
@@ -8,6 +9,7 @@ app = FastAPI(
 )
 
 app.include_router(merger.router)
+app.include_router(compressor.router)
 
 @app.get("/")
 async def root():
