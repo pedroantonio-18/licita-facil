@@ -50,7 +50,7 @@ def _compress_pillow_helper(pdf_bytes: bytes, image_quality: int, max_dimension:
                 if color_space == "/DeviceGray":
                     mode = "L"
                 else:
-                    mode = "RGB"CC
+                    mode = "RGB"
 
                 data = x_obj.get_data()
 
