@@ -7,8 +7,6 @@ services:
     container_name: frontend
     ports:
       - "3000:80"
-    volumes:
-      - ./frontend:/usr/share/nginx/html
     depends_on:
       - pdf-service
 
