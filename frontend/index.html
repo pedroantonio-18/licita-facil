@@ -88,6 +88,26 @@
               </div>
             </section>
             <section class="content-section" id="pdf-merger">
+              <div class="merger-panel">
+                <div class="dropzone merger-dropzone">
+                  <input type="file" class="dropzone-input merger-input" accept=".pdf,application/pdf" multiple hidden>
+                  <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                  <p class="dropzone-text">Arraste múltiplos PDFs aqui ou <span class="dropzone-link">clique para selecionar</span></p>
+                  <span class="dropzone-hint">Suporta múltiplos arquivos .pdf</span>
+                </div>
+                
+                <div class="merger-file-list-container" style="display: none;">
+                  <h3 class="merger-list-title">Arquivos selecionados</h3>
+                  <ul class="merger-file-list"></ul>
+                </div>
+                
+                <div class="merger-controls">
+                  <button type="button" class="merge-btn" disabled>Mesclar PDFs</button>
+                </div>
+                
+                <span class="merge-status"></span>
+                <div class="merger-results"></div>
+              </div>
             </section>
             <section class="content-section" id="pdf-to-excel">
             </section>
