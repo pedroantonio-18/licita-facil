@@ -20,11 +20,9 @@ function initNavigation() {
   const headerTitle = document.querySelector('.main-heading');
 
   const PAGE_TITLES = {
-    'dashboard': 'Painel',
     'pdf-compressor': 'Comprimir PDF',
     'pdf-merger': 'Mesclar PDFs',
-    'pdf-to-excel': 'Converter PDF para XLSX',
-    'settings': 'Configurações'
+    'pdf-to-excel': 'Converter PDF para XLSX'
   };
 
   function navigateTo(targetId) {
@@ -67,10 +65,10 @@ function initNavigation() {
   });
 
   window.addEventListener('popstate', () => {
-    const hashId = window.location.hash.replace('#', '') || 'dashboard';
+    const hashId = window.location.hash.replace('#', '') || 'pdf-compressor';
     navigateTo(hashId);
   });
 
-  const initialHash = window.location.hash.replace('#', '') || 'dashboard';
+  const initialHash = window.location.hash.replace('#', '') || 'pdf-compressor';
   navigateTo(initialHash);
 }
