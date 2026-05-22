@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Licita Fácil</title>
+  <link rel="stylesheet" href="./style.css">
+  <link rel="shortcut icon" href="./assets/icons/logo-icon.ico">
+</head>
+
+<body>
+  <div class="app-layout">
+    <aside class="app-sidebar">
+      <div class="sidebar-logo-container">
+        <a href="/" class="logo-link">
+          <img src="assets/images/logo.png" alt="Licita Fácil Logo" class="sidebar-logo">
+        </a>
+      </div>
+      <nav class="sidebar-nav">
+        <ul class="nav-list">
+          <li class="nav-item">
+            <a href="#dashboard" class="nav-link active">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+              <span>Painel</span>
+            </a>
+          </li>
+          <li class="nav-item dropdown">
+            <button class="dropdown-trigger" type="button">
+              <div class="dropdown-title-group">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                <span class="dropdown-title">PDF</span>
+              </div>
+              <span class="dropdown-arrow"></span>
+            </button>
+            <ul class="dropdown-menu">
+              <li class="dropdown-item">
+                <a href="#pdf-compressor" class="nav-link">
+                  <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h6v6"></path><path d="M20 10h-6V4"></path><path d="M14 10l7-7"></path><path d="M10 14l-7 7"></path></svg>
+                  <span>Comprimir</span>
+                </a>
+              </li>
+              <li class="dropdown-item">
+                <a href="#pdf-merger" class="nav-link">
+                  <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="14" height="14" rx="2" ry="2"></rect><rect x="8" y="8" width="14" height="14" rx="2" ry="2"></rect></svg>
+                  <span>Mesclar</span>
+                </a>
+              </li>
+              <li class="dropdown-item">
+                <a href="#pdf-to-excel" class="nav-link">
+                  <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line></svg>
+                  <span>PDF para Excel</span>
+                </a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-item">
+            <a href="#settings" class="nav-link">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+              <span>Configurações</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </aside>
+
+    <main class="main-container">
+      <div class="content-body">
+        <div class="app-card main-content-card">
+          <div class="app-card-header">
+            <h1 class="main-heading">Painel</h1>
+          </div>
+          <div class="app-card-content">
+            <section class="content-section active" id="dashboard">
+            </section>
+            <section class="content-section" id="pdf-compressor">
+              <div class="compressor-panel">
+                <div class="dropzone">
+                  <input type="file" class="dropzone-input" accept=".pdf,application/pdf" hidden>
+                  <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                  <p class="dropzone-text">Arraste um PDF aqui ou <span class="dropzone-link">clique para selecionar</span></p>
+                  <span class="dropzone-hint">Somente arquivos .pdf</span>
+                </div>
+                <div class="file-info">
+                  <span class="file-info-name"></span>
+                  <button type="button" class="file-remove-btn" title="Remover">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  </button>
+                </div>
+                <div class="compressor-controls">
+                  <select class="level-select">
+                    <option value="low">Baixa compressão</option>
+                    <option value="medium" selected>Média compressão</option>
+                    <option value="high">Alta compressão</option>
+                  </select>
+                  <button type="button" class="compress-btn" disabled>Comprimir</button>
+                </div>
+                <span class="compress-status"></span>
+                <div class="session-results"></div>
+              </div>
+            </section>
+            <section class="content-section" id="pdf-merger">
+            </section>
+            <section class="content-section" id="pdf-to-excel">
+            </section>
+            <section class="content-section" id="settings">
+            </section>
+          </div>
+        </div>
+
+        <div class="app-card recent-files-card">
+          <div class="app-card-header">
+            <h2 class="recent-heading">Arquivos Recentes</h2>
+          </div>
+          <div class="app-card-content recent-files-content">
+            <ul class="recent-files-list"></ul>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+
+</html>
