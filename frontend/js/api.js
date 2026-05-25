@@ -84,3 +84,42 @@ export async function mergePdfs(files, suggestedName = 'merged.pdf') {
 
   return { id, name: fileName, size: blob.size, blob };
 }
+
+export async function convertPdfToExcel(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const url = `${API_BASE}/excel/convert`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    const message = errorData?.detail || `Erro ${response.status}`;
+    throw new Error(message);
+  }
+
+  let fileName = file.name.replace(/\.pdf$/i, '') + '.xlsx';
+  const disposition = response.headers.get('Content-Disposition');
+  if (disposition) {
+    const match = disposition.match(/filename=(.+)/i);
+    if (match) {
+      fileName = match[1].replace(/["']/g, '').trim();
+    }
+  }
+
+  const blob = await response.blob();
+
+  const id = await saveFile({
+    name: fileName,
+    blob,
+    mimeType: blob.type || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    size: blob.size,
+    source: 'excel',
+  });
+
+  return { id, name: fileName, size: blob.size, blob };
+}

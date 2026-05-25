@@ -802,3 +802,71 @@ body {
   width: 100%;
   max-width: 480px;
 }
+
+/* PDF to Excel Section */
+.converter-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 48px 24px;
+  flex: 1;
+}
+
+.converter-controls {
+  width: 100%;
+  max-width: 480px;
+  margin-top: 8px;
+}
+
+.convert-btn {
+  width: 100%;
+  padding: 12px 24px;
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: #ffffff;
+  background-color: var(--color-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), opacity var(--transition-fast), transform var(--transition-fast);
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(17, 209, 142, 0.15);
+}
+
+.convert-btn:hover:not(:disabled) {
+  background-color: var(--color-primary-dark);
+  transform: translateY(-1px);
+}
+
+.convert-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.convert-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.convert-status {
+  font-size: var(--font-size-sm);
+  min-height: 1.2em;
+  transition: color var(--transition-fast);
+}
+
+.convert-status.success {
+  color: var(--color-primary-dark);
+  font-weight: 500;
+}
+
+.convert-status.error {
+  color: #ef4444;
+  font-weight: 500;
+}
+
+.convert-status.loading {
+  color: var(--color-text-muted);
+}

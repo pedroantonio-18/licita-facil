@@ -110,6 +110,25 @@
               </div>
             </section>
             <section class="content-section" id="pdf-to-excel">
+              <div class="converter-panel">
+                <div class="dropzone excel-dropzone">
+                  <input type="file" class="dropzone-input excel-input" accept=".pdf,application/pdf" hidden>
+                  <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                  <p class="dropzone-text">Arraste um PDF aqui ou <span class="dropzone-link">clique para selecionar</span></p>
+                  <span class="dropzone-hint">Somente arquivos .pdf</span>
+                </div>
+                <div class="file-info excel-file-info">
+                  <span class="file-info-name excel-file-name"></span>
+                  <button type="button" class="file-remove-btn excel-remove-btn" title="Remover">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  </button>
+                </div>
+                <div class="converter-controls">
+                  <button type="button" class="convert-btn" disabled>Converter para Excel</button>
+                </div>
+                <span class="convert-status"></span>
+                <div class="session-results excel-results"></div>
+              </div>
             </section>
 
           </div>
