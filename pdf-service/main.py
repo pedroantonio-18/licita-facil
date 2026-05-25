@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import merger, compressor
+from routers import merger, compressor, to_excel
 
 
 app = FastAPI(
@@ -19,6 +19,7 @@ app.add_middleware(
 
 app.include_router(merger.router)
 app.include_router(compressor.router)
+app.include_router(to_excel.router)
 
 @app.get("/")
 async def root():
