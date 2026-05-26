@@ -1,0 +1,7 @@
+pymupdf
+pytesseract
+pdf2image
+opencv-python-headless
+rapidfuzz
+validate-docbr
+reportlab
