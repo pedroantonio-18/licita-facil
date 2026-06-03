@@ -63,8 +63,10 @@ async def convert_pdf_to_excel(
         combined_df = combined_df.iloc[1:, 1:]
         combined_df.columns = list(range(len(combined_df.columns)))
 
+        combined_df.iloc[:, 0] = combined_df.iloc[:, 1]
+
         combined_df.iloc[:, 1] = ""
-        combined_df.iloc[:, 1] = combined_df.iloc[:, 4].astype(str).str[:255]
+        combined_df.iloc[:, 1] = combined_df.iloc[:, 4].astype(str).str[:250]
 
         combined_df["Coluna9"] = combined_df.iloc[:, 4]
         combined_df["Coluna10"] = combined_df.iloc[:, 3]
