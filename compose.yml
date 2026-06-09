@@ -25,3 +25,19 @@ services:
       - PYTHONUNBUFFERED=1
     working_dir: /usr/src/app
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  # data-crossing:
+  #   build:
+  #     context: ./data-crossing
+  #     dockerfile: Dockerfile
+  #   image: data-crossing:latest
+  #   container_name: data-crossing
+  #   ports:
+  #     - "8001:8000"
+  #   volumes:
+  #     - ./data-crossing:/usr/src/app
+  #   environment:
+  #     - PYTHONDONTWRITEBYTECODE=1
+  #     - PYTHONUNBUFFERED=1
+  #   working_dir: /usr/src/app
+  #   command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload

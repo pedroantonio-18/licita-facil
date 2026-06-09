@@ -870,3 +870,404 @@ body {
 .convert-status.loading {
   color: var(--color-text-muted);
 }
+
+/* Gemini Playground Section */
+.gemini-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+  flex: 1;
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.gemini-config-card {
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: box-shadow var(--transition-fast);
+}
+
+.gemini-config-card:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+.gemini-config-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.config-status-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 100px;
+  background-color: #fee2e2;
+  color: #ef4444;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.config-status-badge.active {
+  background-color: var(--color-primary-subtle);
+  color: var(--color-primary-dark);
+}
+
+.toggle-config-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color var(--transition-fast);
+}
+
+.toggle-config-btn:hover {
+  color: var(--color-text);
+}
+
+.gemini-config-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-top: 1px solid var(--color-border-light);
+  padding-top: 16px;
+  transition: all var(--transition-normal);
+}
+
+.gemini-config-body.hidden {
+  display: none;
+}
+
+.config-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.config-label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.input-with-action {
+  display: flex;
+  align-items: center;
+  position: relative;
+  width: 100%;
+}
+
+.config-input {
+  width: 100%;
+  padding: 10px 40px 10px 14px;
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.config-input:focus {
+  border-color: var(--color-primary);
+}
+
+.btn-icon {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.btn-icon:hover {
+  color: var(--color-text-secondary);
+  background-color: var(--color-border-light);
+}
+
+.icon-sm {
+  width: 16px;
+  height: 16px;
+}
+
+.config-hint {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.config-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.save-key-btn {
+  padding: 8px 16px;
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: #ffffff;
+  background-color: var(--color-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.save-key-btn:hover {
+  background-color: var(--color-primary-dark);
+}
+
+.clear-key-btn {
+  padding: 8px 16px;
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.clear-key-btn:hover {
+  background-color: var(--color-border-light);
+  color: var(--color-text);
+}
+
+.gemini-chat-area {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.chat-input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+
+.chat-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  resize: vertical;
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  color: var(--color-text);
+  background: transparent;
+  line-height: 1.5;
+}
+
+.chat-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.chat-controls {
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid var(--color-border-light);
+  padding-top: 12px;
+}
+
+.gemini-send-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: #ffffff;
+  background-color: var(--color-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
+  box-shadow: 0 4px 12px rgba(17, 209, 142, 0.15);
+}
+
+.gemini-send-btn:hover:not(:disabled) {
+  background-color: var(--color-primary-dark);
+  transform: translateY(-1px);
+}
+
+.gemini-send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.send-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.chat-output-container {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  min-height: 200px;
+}
+
+.output-header {
+  height: 48px;
+  border-bottom: 1px solid var(--color-border-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background-color: var(--color-bg-secondary);
+}
+
+.output-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.copy-output-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.copy-output-btn:hover {
+  background-color: var(--color-border-light);
+  color: var(--color-text);
+}
+
+.output-body {
+  padding: 20px;
+  flex: 1;
+  font-size: var(--font-size-base);
+  line-height: 1.6;
+  overflow-y: auto;
+  color: var(--color-text);
+}
+
+.output-placeholder {
+  color: var(--color-text-muted);
+  font-style: italic;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.output-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 100%;
+  color: var(--color-text-secondary);
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--color-border-light);
+  border-top: 3px solid var(--color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.output-error {
+  color: #ef4444;
+  padding: 12px;
+  background-color: #fee2e2;
+  border-radius: var(--radius-sm);
+  border: 1px solid #fca5a5;
+  font-size: var(--font-size-sm);
+}
+
+.gemini-markdown-output p {
+  margin-bottom: 12px;
+}
+
+.gemini-markdown-output p:last-child {
+  margin-bottom: 0;
+}
+
+.gemini-markdown-output code {
+  font-family: monospace;
+  background-color: var(--color-border-light);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.gemini-markdown-output pre {
+  background-color: #1e1e2e;
+  color: #cdd6f4;
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  margin: 12px 0;
+}
+
+.gemini-markdown-output pre code {
+  background-color: transparent;
+  padding: 0;
+  border-radius: 0;
+  color: inherit;
+}
+
+.gemini-markdown-output ul,
+.gemini-markdown-output ol {
+  margin-bottom: 12px;
+  padding-left: 20px;
+}
+
+.gemini-markdown-output li {
+  margin-bottom: 4px;
+}

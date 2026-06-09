@@ -50,6 +50,13 @@
             </ul>
           </li>
 
+          <li class="nav-item">
+            <a href="#gemini-test" class="nav-link">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              <span>Playground Gemini</span>
+            </a>
+          </li>
+
         </ul>
       </nav>
     </aside>
@@ -128,6 +135,62 @@
                 </div>
                 <span class="convert-status"></span>
                 <div class="session-results excel-results"></div>
+              </div>
+            </section>
+
+            <section class="content-section" id="gemini-test">
+              <div class="gemini-panel">
+                <!-- API Key configuration (hidden or visible) -->
+                <div class="gemini-config-card">
+                  <div class="gemini-config-header">
+                    <span class="config-status-badge" id="gemini-status-badge">Sem Chave de API</span>
+                    <button type="button" class="toggle-config-btn" id="toggle-config-btn">
+                      Configurar Chave
+                    </button>
+                  </div>
+                  <div class="gemini-config-body hidden" id="gemini-config-body">
+                    <div class="config-input-group">
+                      <label for="gemini-key-input" class="config-label">Chave de API do Gemini</label>
+                      <div class="input-with-action">
+                        <input type="password" id="gemini-key-input" placeholder="Cole sua API Key aqui (AIzaSy...)" class="config-input">
+                        <button type="button" class="btn-icon" id="toggle-key-visibility" title="Mostrar/Ocultar">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-sm"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        </button>
+                      </div>
+                      <p class="config-hint">Esta chave é armazenada apenas no seu navegador (localStorage) e não é enviada a nenhum servidor intermediário.</p>
+                    </div>
+                    <div class="config-actions">
+                      <button type="button" class="save-key-btn" id="save-key-btn">Salvar</button>
+                      <button type="button" class="clear-key-btn" id="clear-key-btn">Limpar</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Chat/Test workspace -->
+                <div class="gemini-chat-area">
+                  <div class="chat-input-container">
+                    <textarea id="gemini-prompt-input" placeholder="Escreva sua pergunta para o Gemini... (Pressione Ctrl+Enter para enviar)" class="chat-input" rows="4"></textarea>
+                    <div class="chat-controls">
+                      <button type="button" class="gemini-send-btn" id="gemini-send-btn">
+                        <span>Enviar</span>
+                        <svg class="send-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="chat-output-container">
+                    <div class="output-header">
+                      <span class="output-title">Resposta do Gemini</span>
+                      <button type="button" class="copy-output-btn" id="copy-output-btn" title="Copiar resposta" style="display: none;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-sm"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        <span>Copiar</span>
+                      </button>
+                    </div>
+                    <div class="output-body" id="gemini-output">
+                      <div class="output-placeholder">A resposta da inteligência artificial aparecerá aqui...</div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </section>
 

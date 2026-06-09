@@ -5,3 +5,5 @@ opencv-python-headless
 rapidfuzz
 validate-docbr
 reportlab
+fastapi
+uvicorn[standard]

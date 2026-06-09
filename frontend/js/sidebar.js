@@ -22,7 +22,8 @@ function initNavigation() {
   const PAGE_TITLES = {
     'pdf-compressor': 'Comprimir PDF',
     'pdf-merger': 'Mesclar PDFs',
-    'pdf-to-excel': 'Converter PDF para XLSX'
+    'pdf-to-excel': 'Converter PDF para XLSX',
+    'gemini-test': 'Playground Gemini'
   };
 
   function navigateTo(targetId) {
