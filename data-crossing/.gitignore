@@ -3,3 +3,5 @@ __pycache__/
 *.pyc
 *.db
 pdfs/
+data/
+.pytest_cache/
