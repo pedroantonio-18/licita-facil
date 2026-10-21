@@ -23,7 +23,8 @@ function initNavigation() {
     'pdf-compressor': 'Comprimir PDF',
     'pdf-merger': 'Mesclar PDFs',
     'pdf-to-excel': 'Converter PDF para XLSX',
-    'gemini-test': 'Playground Gemini'
+    'gemini-test': 'Playground Gemini',
+    'conluio': 'Análise de Conluio'
   };
 
   function navigateTo(targetId) {

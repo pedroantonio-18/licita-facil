@@ -1,45 +1,27 @@
-from detector import detect
-from extractor import extract
-from ocr import pdf_to_text
-from database import create_tables, salvar_empresa, salvar_campos
-import sys
+import logging
 
-if len(sys.argv) < 2:
-    print("Usage: python3 main.py file.pdf")
-    sys.exit(1)
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from routers import conluio
 
-# cria as tabelas se ainda não existirem
-create_tables()
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
-doc = sys.argv[1]
-result = detect(doc)
+app = FastAPI(
+    title="LicitaFácil Data Crossing",
+    description="Microserviço de análise documental e cruzamento de dados de processos licitatórios.",
+    version="0.1.0"
+)
 
-if result["type"] == "searchable":
-    text = result["text"]
-else:
-    result = pdf_to_text(doc)
-    text = result["text"]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["Content-Disposition", "X-Relatorio-SHA256"],
+)
 
-extracted = extract(text)
+app.include_router(conluio.router)
 
-# pega o nome do arquivo sem o caminho
-nome_arquivo = doc.split('/')[-1]
-
-# tenta pegar o primeiro CNPJ extraído, senão pede pro usuário
-if extracted["cnpjs"]:
-    cnpj = extracted["cnpjs"][0]
-else:
-    cnpj = input("CNPJ não encontrado no documento. Digite manualmente: ")
-
-empresa_id = salvar_empresa(cnpj, "desconhecido", nome_arquivo)
-salvar_campos(empresa_id, extracted)
-
-print(f'\n--- RESULTADO ---')
-print(f'Arquivo: {nome_arquivo}')
-print(f'Tipo: {result["type"]}')
-print(f'Empresa salva com id: {empresa_id}')
-print(f'CPFs: {extracted["cpfs"]}')
-print(f'CNPJs: {extracted["cnpjs"]}')
-print(f'CEPs: {extracted["ceps"]}')
-print(f'Phones: {extracted["phones"]}')
-print(f'Pessoas: {extracted["people"]}')
+@app.get("/")
+async def root():
+    return {"message": "Data Crossing Service está online e operacional!"}

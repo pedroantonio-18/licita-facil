@@ -9,6 +9,7 @@ services:
       - "3000:80"
     depends_on:
       - pdf-service
+      - data-crossing
 
   pdf-service:
     build:
@@ -26,18 +27,25 @@ services:
     working_dir: /usr/src/app
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
-  # data-crossing:
-  #   build:
-  #     context: ./data-crossing
-  #     dockerfile: Dockerfile
-  #   image: data-crossing:latest
-  #   container_name: data-crossing
-  #   ports:
-  #     - "8001:8000"
-  #   volumes:
-  #     - ./data-crossing:/usr/src/app
-  #   environment:
-  #     - PYTHONDONTWRITEBYTECODE=1
-  #     - PYTHONUNBUFFERED=1
-  #   working_dir: /usr/src/app
-  #   command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+  # Análise de conluio. Sem internet em produção: os pesos do OCR (docTR)
+  # vêm embutidos na imagem; o Gemini é chamado pelo navegador.
+  data-crossing:
+    build:
+      context: ./data-crossing
+      dockerfile: Dockerfile
+    image: data-crossing:latest
+    container_name: data-crossing
+    ports:
+      - "8001:8001"
+    volumes:
+      - data-crossing-db:/app/data   # sessões e hashes dos relatórios (SQLite)
+    environment:
+      - LLM_THREADS=4
+      - OCR_ATIVO=0
+      # CPF(s) do usuário consultante do SICAF, vindos do ambiente do servidor
+      # (dado pessoal: não versionar)
+      - CPF_IGNORADOS=${CPF_IGNORADOS:-}
+    restart: unless-stopped
+
+volumes:
+  data-crossing-db:

@@ -57,6 +57,13 @@
             </a>
           </li>
 
+          <li class="nav-item">
+            <a href="#conluio" class="nav-link">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <span>Análise de Conluio</span>
+            </a>
+          </li>
+
         </ul>
       </nav>
     </aside>
@@ -191,6 +198,45 @@
                     </div>
                   </div>
                 </div>
+              </div>
+            </section>
+
+            <section class="content-section" id="conluio">
+              <div class="conluio-panel">
+
+                <div class="conluio-config">
+                  <label class="conluio-label" for="conluio-processo-id">Identificador do processo</label>
+                  <input type="text" id="conluio-processo-id" class="conluio-input"
+                    placeholder="Ex: 0001234-55.2025.4.01.3500" />
+
+                  <label class="conluio-label" for="conluio-api-key">Chave de API do Gemini (opcional)</label>
+                  <input type="password" id="conluio-api-key" class="conluio-input" autocomplete="off"
+                    placeholder="Sem chave, a extração é feita localmente no servidor" />
+
+                  <label class="conluio-check">
+                    <input type="checkbox" id="conluio-parecer" />
+                    Incluir parecer preliminar de IA (avaliação geral imparcial e comentários, citando os dados)
+                  </label>
+                  <p class="conluio-modo"></p>
+                </div>
+
+                <div id="conluio-empresas-lista">
+                  <p class="conluio-hint">Nenhuma empresa adicionada ainda.</p>
+                </div>
+
+                <button type="button" class="conluio-btn-secondary" id="conluio-add-empresa">
+                  + Adicionar empresa
+                </button>
+
+                <div class="conluio-actions">
+                  <button type="button" class="conluio-btn-primary" id="conluio-analisar" disabled>
+                    Analisar coincidências
+                  </button>
+                </div>
+
+                <span class="conluio-status"></span>
+                <div class="conluio-results"></div>
+
               </div>
             </section>
 

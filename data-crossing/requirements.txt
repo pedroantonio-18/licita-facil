@@ -1,9 +1,14 @@
-pymupdf
-pytesseract
-pdf2image
-opencv-python-headless
-rapidfuzz
-validate-docbr
-reportlab
-fastapi
-uvicorn[standard]
+fastapi==0.115.0
+uvicorn==0.30.6
+python-multipart==0.0.9
+pymupdf==1.24.10
+pdf2image==1.17.0
+numpy==1.26.4
+pillow==10.4.0
+python-doctr[torch]==0.9.0
+rapidfuzz==3.9.7
+reportlab==4.2.2
+
+# Testes (pytest tests/)
+pytest==8.3.3
+httpx==0.27.2
