@@ -64,6 +64,13 @@
             </a>
           </li>
 
+          <li class="nav-item">
+            <a href="#juntada" class="nav-link">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+              <span>Juntada de Documentos</span>
+            </a>
+          </li>
+
         </ul>
       </nav>
     </aside>
@@ -236,6 +243,52 @@
 
                 <span class="conluio-status"></span>
                 <div class="conluio-results"></div>
+
+              </div>
+            </section>
+
+            <section class="content-section" id="juntada">
+              <div class="conluio-panel">
+
+                <div class="conluio-config">
+                  <label class="conluio-label" for="juntada-processo-id">Identificador do processo</label>
+                  <input type="text" id="juntada-processo-id" class="conluio-input"
+                    placeholder="Ex: 0001234-55.2026.4.01.3500" />
+
+                  <label class="conluio-label" for="juntada-data-referencia">Data de referência (as certidões precisam estar válidas nesta data)</label>
+                  <input type="date" id="juntada-data-referencia" class="conluio-input juntada-data" />
+
+                  <label class="conluio-label" for="juntada-objeto">Objeto da contratação (define estadual ou municipal)</label>
+                  <select id="juntada-objeto" class="conluio-input juntada-data"></select>
+
+                  <span class="conluio-label">Documentos obrigatórios</span>
+                  <div class="juntada-obrigatorias"></div>
+
+                  <div class="juntada-prazos">
+                    <label class="conluio-label" for="juntada-dias-consultas">TCU e CGU válidas por
+                      <input type="number" min="0" id="juntada-dias-consultas" class="conluio-input juntada-dias" /> dias da emissão</label>
+                    <label class="conluio-label" for="juntada-dias-falencia">Falência sem validade impressa:
+                      <input type="number" min="0" id="juntada-dias-falencia" class="conluio-input juntada-dias" /> dias</label>
+                  </div>
+                  <p class="conluio-modo juntada-links"></p>
+                </div>
+
+                <div id="juntada-empresas-lista">
+                  <p class="conluio-hint">Nenhuma empresa adicionada ainda.</p>
+                </div>
+
+                <button type="button" class="conluio-btn-secondary" id="juntada-add-empresa">
+                  + Adicionar empresa
+                </button>
+
+                <div class="conluio-actions">
+                  <button type="button" class="conluio-btn-primary" id="juntada-conferir" disabled>
+                    Conferir certidões
+                  </button>
+                </div>
+
+                <span class="conluio-status juntada-status"></span>
+                <div class="juntada-resultados"></div>
 
               </div>
             </section>

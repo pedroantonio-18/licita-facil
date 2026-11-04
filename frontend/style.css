@@ -1591,3 +1591,138 @@ body {
 .empresa-status:empty { display: none; }
 .empresa-status.success { color: var(--color-primary-darker); }
 .empresa-status.error   { color: #b45309; }
+
+/* ============================================================
+   Juntada de Documentos
+   (reaproveita os campos, blocos e botões da Análise de Conluio)
+   ============================================================ */
+
+.juntada-data { max-width: 220px; }
+
+.juntada-obrigatorias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 1.2rem;
+}
+
+.juntada-prazos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.5rem;
+  margin-top: 0.4rem;
+}
+
+.juntada-prazos .conluio-label {
+  font-weight: 500;
+}
+
+.juntada-dias {
+  width: 4.5rem;
+  display: inline-block;
+  padding: 0.3rem 0.5rem;
+  margin: 0 0.25rem;
+}
+
+.juntada-links a {
+  color: var(--color-primary-darker);
+}
+
+.juntada-resultados {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.juntada-resultados-acoes {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.juntada-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  background: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.juntada-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.juntada-cnpj {
+  margin-left: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.juntada-tabela-wrapper {
+  overflow-x: auto;
+}
+
+.juntada-card-acoes {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.juntada-opcional {
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+}
+
+.juntada-situacao {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.juntada-ok       { background: #d9f2e4; color: #166534; }
+.juntada-atencao  { background: #fdf0d5; color: #8a5a00; }
+.juntada-problema,
+.juntada-faltando { background: #fde2e2; color: #9b1c1c; }
+
+.juntada-link-btn {
+  display: block;
+  margin-top: 0.3rem;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 0.72rem;
+  color: var(--color-primary-darker);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.juntada-form-manual {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.7rem;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.juntada-form-manual[hidden] { display: none; }
+
+.juntada-arquivos {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+}
+
+.juntada-arquivos ul {
+  margin: 0.3rem 0 0;
+  padding-left: 1.1rem;
+}

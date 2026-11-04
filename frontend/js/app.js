@@ -5,6 +5,7 @@ import { initMerger } from './merger.js';
 import { initExcelConverter } from './excelConverter.js';
 import { initGeminiTest } from './geminiTest.js';
 import { initConluio } from './conluio.js';
+import { initJuntada } from './juntada.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   initSidebar();
@@ -14,4 +15,5 @@ document.addEventListener('DOMContentLoaded', () => {
   initExcelConverter();
   initGeminiTest();
   initConluio();
+  initJuntada();
 });
