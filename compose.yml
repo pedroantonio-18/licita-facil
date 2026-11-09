@@ -11,6 +11,7 @@ services:
       - pdf-service
       - data-crossing
       - juntada-service
+      - minutas-service
 
   pdf-service:
     build:
@@ -63,6 +64,21 @@ services:
       - JUNTADA_CONSULTA_TCU=${JUNTADA_CONSULTA_TCU:-0}   # 1 só se a TI liberar saída para o TCU
     restart: unless-stopped
 
+  # Minutas: aviso de dispensa e edital de pregão a partir dos modelos da AGU.
+  # Os modelos (.docx) vêm na imagem; versões novas enviadas pela tela ficam no volume.
+  minutas-service:
+    build:
+      context: ./minutas-service
+      dockerfile: Dockerfile
+    image: minutas-service:latest
+    container_name: minutas-service
+    ports:
+      - "8003:8003"
+    volumes:
+      - minutas-modelos:/app/modelos
+    restart: unless-stopped
+
 volumes:
   data-crossing-db:
   juntada-sessoes:
+  minutas-modelos:

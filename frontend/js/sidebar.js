@@ -25,7 +25,8 @@ function initNavigation() {
     'pdf-to-excel': 'Converter PDF para XLSX',
     'gemini-test': 'Playground Gemini',
     'conluio': 'Análise de Conluio',
-    'juntada': 'Juntada de Documentos'
+    'juntada': 'Juntada de Documentos',
+    'minutas': 'Minutas'
   };
 
   function navigateTo(targetId) {
