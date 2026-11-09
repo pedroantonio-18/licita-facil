@@ -138,3 +138,57 @@ def test_preencher_campo_preserva_espaco_que_fazia_parte_do_campo():
     m = ler_modelo(modelo_ficticio.docx(corpo))
     cid = m.blocos[1].campos[0].id
     assert montar(m, Decisoes(campos={cid: "90 (noventa)"})).blocos[1].texto == "A validade não será inferior a 90 (noventa) dias."
+
+
+def test_estilo_opcional_da_agu_vira_pendencia_e_remover_leva_os_subitens():
+    P = modelo_ficticio.par
+    corpo = [P("DA CONTRATAÇÃO", estilo="Nivel01"),
+             P("O aceite da Nota de Empenho implica:", estilo="Nvel2-Opcional"),     # 1.1. (opcional)
+             P("a Nota substitui o contrato;", estilo="Nivel3"),                    # 1.1.1.
+             P("a contratada se vincula à proposta.", estilo="Nivel3"),             # 1.1.2.
+             P("O prazo de entrega é o do TR.", estilo="Nivel2"),                   # 1.2.
+             P("pessoas físicas.", estilo="Nvel3-R")]                               # 1.2.1. (opcional)
+    m = ler_modelo(modelo_ficticio.docx(corpo))
+    mi = montar(m, Decisoes())
+    assert sorted(p.numero for p in mi.pendencias if p.tipo == "opcional") == ["1.1.", "1.2.1."]
+    aceite, fisicas = m.blocos[1].id, m.blocos[5].id
+    mi = montar(m, Decisoes(remover={aceite: "Haverá termo de contrato"}, manter={fisicas}))
+    assert [b.texto for b in mi.blocos] == ["DA CONTRATAÇÃO", "O prazo de entrega é o do TR.", "pessoas físicas."]
+    assert [b.numero for b in mi.blocos] == ["1.", "1.1.", "1.1.1."]
+    assert sum("Subitem do item 1.1" in r.motivo for r in mi.removidos) == 2
+    assert mi.pendencias == []
+
+
+def test_escolha_sem_colchetes_e_campo_em_maiusculas():
+    v = lambda t: modelo_ficticio.run(t, vermelho=True)
+    P = modelo_ficticio.par
+    corpo = [P(v("ÓRGÃO OU ENTIDADE PÚBLICA")), P("DO OBJETO", estilo="Nivel01"),
+             P("O adjudicatário deverá assinar o ", v("Termo de Contrato"), v(" OU "), v("aceitar instrumento equivalente"), ".", estilo="Nivel2")]
+    m = ler_modelo(modelo_ficticio.docx(corpo))
+    assert m.blocos[0].campos[0].opcoes == []
+    assert m.blocos[2].campos[0].opcoes == ["Termo de Contrato", "aceitar instrumento equivalente"]
+
+
+def test_xx_preto_antes_do_extenso_entra_no_campo_e_assinar_o_aceitar():
+    v = lambda t: modelo_ficticio.run(t, vermelho=True)
+    P = modelo_ficticio.par
+    corpo = [P("DA CONTRATAÇÃO", estilo="Nivel01"),
+             P("O adjudicatário terá o prazo de XX (", v("valor por extenso"), ") dias úteis para assinar o ",
+               v("Termo de Contrato"), v(" OU "), v("aceitar instrumento equivalente"), ".", estilo="Nivel2")]
+    m = ler_modelo(modelo_ficticio.docx(corpo))
+    prazo, escolha = m.blocos[1].campos
+    assert prazo.texto == "XX (valor por extenso)"
+    mi = montar(m, Decisoes(campos={prazo.id: "5 (cinco)", escolha.id: "aceitar instrumento equivalente"}))
+    assert mi.blocos[1].texto == "O adjudicatário terá o prazo de 5 (cinco) dias úteis para aceitar instrumento equivalente."
+    assert mi.pendencias == []
+
+
+def test_xx_e_parentese_em_pedacos_separados():
+    v = lambda t: modelo_ficticio.run(t, vermelho=True)
+    P, R = modelo_ficticio.par, modelo_ficticio.run
+    corpo = [P("DA CONTRATAÇÃO", estilo="Nivel01"),
+             P("O prazo de ", R("XX", negrito=True), " (", v("valor por extenso"), ") dias úteis.", estilo="Nivel2")]
+    m = ler_modelo(modelo_ficticio.docx(corpo))
+    assert m.blocos[1].campos[0].texto == "XX (valor por extenso)"
+    mi = montar(m, Decisoes(campos={m.blocos[1].campos[0].id: "5 (cinco)"}))
+    assert mi.blocos[1].texto == "O prazo de 5 (cinco) dias úteis."

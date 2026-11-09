@@ -10,6 +10,7 @@ TR = """TERMO DE REFERÊNCIA (FICTÍCIO)
 2. O prazo de validade da proposta será de 90 (noventa) dias.
 3. Não será admitida a participação de empresas reunidas em consórcio, dada a baixa complexidade do objeto.
 4. O lance será ofertado pelo valor global do lote.
+5. Não há itens de participação exclusiva para ME/EPP, por se tratar de lote único.
 """ + "Texto de preenchimento do termo de referência. " * 10
 
 
@@ -66,7 +67,8 @@ def test_decisoes_validas_sao_aplicadas():
         {"bloco": trecho, "acao": "retirar_trecho", "campo": f"{trecho}.1", "motivo": "Serviço comum, sem projeto básico"},
         {"bloco": consorcio, "acao": "manter", "motivo": "O TR veda consórcio expressamente",
          "evidencia": "Não será admitida a participação de empresas reunidas em consórcio"},
-        {"bloco": itens_me, "acao": "remover", "motivo": "Lote único, sem itens exclusivos para ME/EPP"},
+        {"bloco": itens_me, "acao": "remover", "motivo": "Lote único, sem itens exclusivos para ME/EPP",
+         "evidencia": "Não há itens de participação exclusiva para ME/EPP"},
         {"bloco": unico, "acao": "manter", "motivo": "O objeto é em lote único", "evidencia": "em lote único"},
     ]}, ensure_ascii=False)
     r = validar(itens, resposta, TR)
@@ -154,3 +156,56 @@ def test_api_prompt_e_validar(tmp_path, monkeypatch):
     assert v["descartes"] == [] and v["decisoes"]["campos"] == {f"{bloco}.1": "90 (noventa)"}
     final = c.post("/minutas/montar", json={**base, "decisoes": v["decisoes"]}).json()
     assert final["resumo"]["pendencias"] == 0
+
+
+def test_formato_relevancia_e_valor_do_modelo():
+    v = lambda t: run(t, vermelho=True)
+    m = ler_modelo(docx([
+        par("DO OBJETO", estilo="Nivel01"),
+        par("A multa será recolhida no prazo de ", v("XX"), v(" "), "(", v("valor por extenso"), ") dias.", estilo="Nivel2"),
+        par("Aplicam-se as disposições da ", v("Lei nº 14.133, de 2021"), ".", estilo="Nivel2"),
+        par("O adjudicatário terá prazo de ", v("XX"), " dias úteis.", estilo="Nivel2"),
+        par("pessoas físicas.", estilo="Nvel3-R"),
+    ]))
+    mi = montar(m, Decisoes())
+    itens = pendencias_para_ia(m, mi, set())
+    multa, lei, prazo, fisicas = (m.blocos[i].id for i in (1, 2, 3, 4))
+    assert next(it for it in itens if it.bloco == multa).campos[0]["formato"].startswith("número")
+    tr = TR + " 4.2. O adjudicatário terá o prazo de 5 (cinco) dias úteis para aceitar a Nota de Empenho."
+    r = validar(itens, json.dumps({"decisoes": [
+        {"bloco": multa, "acao": "preencher", "campos": {f"{multa}.1": "trinta"}, "motivo": "Prazo de multa do TR",
+         "evidencia": "O prazo de validade da proposta será de 90 (noventa) dias"},
+        {"bloco": lei, "acao": "preencher", "campos": {f"{lei}.1": "Lei nº 14.133, de 2021"}, "motivo": "Mantido o texto do modelo"},
+        {"bloco": prazo, "acao": "preencher", "campos": {f"{prazo}.1": "10"}, "motivo": "Prazo para aceitar a nota",
+         "evidencia": "dada a baixa complexidade do objeto"},
+        {"bloco": fisicas, "acao": "manter", "motivo": "Redação padrão da AGU mantida"},
+    ]}, ensure_ascii=False), tr)
+    motivos = {d["bloco"]: d["motivo"] for d in r.descartes}
+    assert "fora do padrão do modelo" in motivos[multa]
+    assert "não menciona o valor" in motivos[prazo]
+    assert {a["bloco"] for a in r.aplicadas} == {lei, fisicas}       # sem trecho do TR: repete o modelo / mantém opcional
+
+
+def test_remocao_sem_trecho_do_assunto_e_valor_inventado_sao_recusados():
+    m, mi, itens = _contexto()
+    consorcio, itens_me = _id(m, "pessoas jurídicas reunidas"), _id(m, "Para os itens")
+    r = validar(itens, json.dumps({"decisoes": [
+        # cláusula vermelha adotada citando trecho que não fala de consórcio
+        {"bloco": consorcio, "acao": "manter", "motivo": "Mantida a vedação padrão", "evidencia": "O lance será ofertado pelo valor global do lote."},
+        # reescrita com percentual que não está no trecho citado
+        {"bloco": itens_me, "acao": "reescrever", "texto": "Para os itens 1, 2 e 3, a participação é exclusiva a ME/EPP.",
+         "motivo": "Itens definidos no TR", "evidencia": "Não há itens de participação exclusiva para ME/EPP"},
+    ]}, ensure_ascii=False), TR)
+    motivos = {d["bloco"]: d["motivo"] for d in r.descartes}
+    assert "fica para decisão do servidor" in motivos[consorcio]
+    assert "valores que não estão no trecho" in motivos[itens_me]
+    assert r.aplicadas == []
+
+
+def test_reescrever_para_negar_clausula_e_recusado():
+    m, mi, itens = _contexto()
+    itens_me = _id(m, "Para os itens")
+    r = validar(itens, json.dumps({"decisoes": [
+        {"bloco": itens_me, "acao": "reescrever", "texto": "Para o lote único, a participação não é exclusiva a ME/EPP.",
+         "motivo": "Lote único sem exclusividade", "evidencia": "Não há itens de participação exclusiva para ME/EPP"}]}), TR)
+    assert "a ação é remover" in r.descartes[0]["motivo"]

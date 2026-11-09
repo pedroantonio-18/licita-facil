@@ -169,10 +169,17 @@ def montar(modelo: Modelo, decisoes: Decisoes) -> Minuta:
     removidos: list[Removido] = []
     pendencias: list[Pendencia] = []
 
+    corte: tuple[int, str] | None = None     # (nível, número) do item removido: seus subitens saem junto
     for b in modelo.blocos:
         if b.tipo == "sumario":
             continue                                  # o sumário é refeito a partir dos títulos finais
         num = numeros_modelo.get(b.id, "")
+        if corte is not None:
+            if b.nivel and b.nivel > corte[0] or b.tipo == "tabela":
+                removidos.append(Removido(b.id, num, b.texto, f"Subitem do item {corte[1]} do modelo, que foi removido"))
+                continue
+            if b.tipo != "ou":
+                corte = None
         if b.tema_integral and b.tema_integral in excluidos and b.id not in decisoes.textos and b.id not in decisoes.manter:
             # (bloco reescrito ou mantido por decisão não sai pelo tema: ex. valor do OBJETO na capa,
             # que a AGU realça como registro de preços)
@@ -180,6 +187,8 @@ def montar(modelo: Modelo, decisoes: Decisoes) -> Minuta:
             continue
         if b.id in decisoes.remover:
             removidos.append(Removido(b.id, num, b.texto, decisoes.remover[b.id] or "Removido"))
+            if b.nivel:
+                corte = (b.nivel, num.rstrip("."))
             continue
         restantes = _sem_temas(b.trechos, excluidos)
         if len(restantes) != len(b.trechos):
@@ -265,6 +274,9 @@ def montar(modelo: Modelo, decisoes: Decisoes) -> Minuta:
                 pendencias.append(Pendencia(b.id, num_novo, "Campo do modelo ainda não preenchido (texto em vermelho na AGU)"))
             elif MARCADOR_PRETO.search("".join(t.texto for t in trechos)):
                 pendencias.append(Pendencia(b.id, num_novo, "Marcador do modelo a preencher (XX / ......)", "marcador"))
+            elif b.opcional and b.id not in decisoes.manter and situacao != "alterado":
+                # estilo "-R"/"-Opcional" da AGU: redação que se adota ou não (no Aviso 75/2026 a SELIT tirou 2/3)
+                pendencias.append(Pendencia(b.id, num_novo, "Cláusula opcional do modelo da AGU: manter ou remover conforme o caso", "opcional"))
 
         blocos.append(BlocoFinal(
             id=b.id, tipo=b.tipo, nivel=b.nivel, numero=num_novo, numero_modelo=numeros_modelo.get(b.id, ""),
@@ -313,7 +325,12 @@ def _preencher_campos(trechos: list[Trecho], valores: dict[str, str]) -> list[Tr
                     saida.append(Trecho(texto=antes + valor + depois, negrito=t.negrito, sublinhado=t.sublinhado))
             continue
         saida.append(t)
-    return _limpa_espacos(saida)
+    saida = _limpa_espacos(saida)
+    # Modelo da AGU: "para assinar o ⟦Termo de Contrato OU aceitar instrumento equivalente⟧" — escolhida
+    # a segunda opção, "assinar o aceitar" não faz sentido
+    texto = "".join(t.texto for t in saida)
+    corrigido = re.sub(r"\bassinar o (aceitar)\b", r"\1", texto)
+    return saida if corrigido == texto else _reaplicar_texto(saida, corrigido)
 
 
 def _reaplicar_texto(trechos: list[Trecho], novo: str) -> list[Trecho]:

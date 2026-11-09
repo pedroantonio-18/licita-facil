@@ -159,7 +159,8 @@ def _serializar(m: Modelo, mi: Minuta) -> dict:
             "alterados": sum(b.situacao == "alterado" for b in mi.blocos),
             "referencias": sum(b.situacao == "referencia" for b in mi.blocos),
             "removidos": len(mi.removidos),
-            "pendencias": len(mi.pendencias),
+            "pendencias": sum(p.tipo != "opcional" for p in mi.pendencias),
+            "opcionais": sum(p.tipo == "opcional" for p in mi.pendencias),   # cláusulas opcionais da AGU a confirmar
             "texto_fixo_alterado": sum(b.alterou_texto_fixo for b in mi.blocos),
         },
         "html_sei": html_sei(mi),

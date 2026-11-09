@@ -353,7 +353,8 @@ export function initMinutas() {
             ultimo = corpo;
             desenharResultado();
             const p = corpo.resumo.pendencias;
-            setStatus(p ? `Minuta montada. ${p} pendência(s) para resolver.` : 'Minuta montada, sem pendências.', p ? '' : 'success');
+            const o = corpo.resumo.opcionais || 0;
+            setStatus(p || o ? `Minuta montada. ${p} pendência(s) e ${o} cláusula(s) opcional(is) a confirmar.` : 'Minuta montada, sem pendências.', p || o ? '' : 'success');
         } catch (err) {
             setStatus(err.message === 'Failed to fetch' ? 'Serviço de minutas indisponível.' : err.message, 'error');
         } finally {
@@ -403,11 +404,27 @@ export function initMinutas() {
         return (bloco.campos || []).filter(c => c.texto && bloco.texto.includes(c.texto));
     }
 
+    function semInfoHtml(p) {
+        const semInfo = iaInfo?.sem_informacao.find(x => x.bloco === p.bloco);
+        const descartada = iaInfo?.descartes.find(x => x.bloco === p.bloco);
+        return (semInfo ? `<span class="minutas-ia-dica">IA: ${esc(semInfo.motivo || 'o TR não permite decidir')}</span>` : '') +
+               (descartada ? `<span class="minutas-ia-dica">IA descartada: ${esc(descartada.motivo)}</span>` : '');
+    }
+
     function pendenciaHtml(p) {
         const b = blocoPorId(p.bloco);
         if (!b) return '';
         const ref = `<span class="minutas-num">${esc(p.numero || '—')}</span>`;
         let acoes = '';
+        if (p.tipo === 'opcional') {
+            return `<li class="minutas-opcional">
+                    ${ref}<span class="minutas-opcional-texto">${esc(b.texto)}</span>
+                    ${semInfoHtml(p)}
+                    <span class="minutas-acoes">
+                        <button type="button" class="conluio-btn-secondary" data-acao="manter" data-id="${b.id}">Manter</button>
+                        <button type="button" class="conluio-btn-secondary" data-acao="remover" data-id="${b.id}">Remover</button>
+                    </span>${notasHtml(b)}</li>`;
+        }
         if (p.tipo === 'clausula') {
             acoes = `<button type="button" class="conluio-btn-secondary" data-acao="manter" data-id="${b.id}">Manter</button>
                      <button type="button" class="conluio-btn-secondary" data-acao="remover" data-id="${b.id}">Remover</button>`;
@@ -490,20 +507,24 @@ export function initMinutas() {
     function iaHtml() {
         if (!iaInfo) return '';
         const n = iaInfo.aplicadas.length;
-        const descartes = iaInfo.descartes.map(d => `<li>${esc(d.numero || d.bloco || '—')}: ${esc(d.motivo)}</li>`).join('');
+        const semBase = iaInfo.descartes.filter(d => d.motivo.includes('fica para decisão do servidor'));
+        const erros = iaInfo.descartes.filter(d => !semBase.includes(d));
+        const ficaram = semBase.length + iaInfo.sem_informacao.length;
+        const descartes = erros.map(d => `<li>${esc(d.numero || d.bloco || '—')}: ${esc(d.motivo)}</li>`).join('');
         return `<section class="minutas-secao minutas-ia">
             <h3>Sugestões da IA (${esc(iaInfo.modelo)})</h3>
             <p>${n} de ${iaInfo.pendencias_enviadas} pendência(s) resolvidas com base no TR — confira em
                “O que mudou” (origem IA, com o trecho do TR) e use Desfazer se discordar.
-               ${iaInfo.sem_informacao.length ? `${iaInfo.sem_informacao.length} ficaram para você: o TR não permite decidir.` : ''}</p>
-            ${descartes ? `<details><summary>${iaInfo.descartes.length} sugestão(ões) descartada(s) na conferência</summary><ul>${descartes}</ul></details>` : ''}
+               ${ficaram ? `${ficaram} ficaram para você: o TR não traz trecho que permita decidir.` : ''}</p>
+            ${descartes ? `<details><summary>${erros.length} sugestão(ões) recusada(s) na conferência</summary><ul>${descartes}</ul></details>` : ''}
             <p class="conluio-modo">A IA pode errar: a minuta continua sendo de responsabilidade de quem assina.</p>
         </section>`;
     }
 
     function desenharResultado() {
         const r = ultimo.resumo;
-        const pend = ultimo.pendencias.map(pendenciaHtml).join('');
+        const pend = ultimo.pendencias.filter(p => p.tipo !== 'opcional').map(pendenciaHtml).join('');
+        const opcionais = ultimo.pendencias.filter(p => p.tipo === 'opcional');
         const alt = alteracoesHtml();
         resultadoDiv.innerHTML = `
             <div class="minutas-resumo">
@@ -512,12 +533,18 @@ export function initMinutas() {
                 <span><strong>${r.referencias}</strong> referências ajustadas</span>
                 <span><strong>${r.removidos}</strong> removidos</span>
                 <span class="${r.pendencias ? 'minutas-alerta' : ''}"><strong>${r.pendencias}</strong> pendências</span>
+                ${r.opcionais ? `<span class="minutas-alerta"><strong>${r.opcionais}</strong> cláusulas opcionais a confirmar</span>` : ''}
                 ${r.texto_fixo_alterado ? `<span class="minutas-alerta"><strong>${r.texto_fixo_alterado}</strong> com texto fixo alterado</span>` : ''}
             </div>
             ${iaHtml()}
-            ${r.pendencias ? `<section class="minutas-secao">
+            ${r.pendencias || r.opcionais ? `<section class="minutas-secao">
                 <div class="minutas-previa-topo"><h3>Pendências</h3>${botaoIA()}</div>
                 <ul class="minutas-lista">${pend}</ul></section>` : ''}
+            ${opcionais.length ? `<section class="minutas-secao">
+                <div class="minutas-previa-topo"><h3>Cláusulas opcionais do modelo da AGU (${opcionais.length})</h3>
+                    <button type="button" class="conluio-btn-secondary" id="minutas-manter-todas">Manter todas as restantes</button></div>
+                <p class="conluio-modo">A AGU marca estas cláusulas como opcionais: confirme as que se aplicam ao caso. Remover um item tira também os subitens.</p>
+                <ul class="minutas-lista minutas-lista-compacta">${opcionais.map(pendenciaHtml).join('')}</ul></section>` : ''}
             <details class="minutas-secao"><summary><h3>O que mudou em relação ao modelo da AGU (${alt.total} alterados, ${r.removidos} removidos)</h3></summary>
                 <ul class="minutas-lista">${alt.linhas}${alt.removidos}</ul></details>
             <section class="minutas-secao">
@@ -532,6 +559,14 @@ export function initMinutas() {
         resultadoDiv.querySelectorAll('[data-acao]').forEach(btn => btn.addEventListener('click', () => acao(btn)));
         resultadoDiv.querySelector('#minutas-copiar').addEventListener('click', copiar);
         resultadoDiv.querySelector('#minutas-ia')?.addEventListener('click', sugerirComIA);
+        resultadoDiv.querySelector('#minutas-manter-todas')?.addEventListener('click', () => {
+            opcionais.forEach(p => {
+                if (!decisoes.manter.includes(p.bloco)) decisoes.manter.push(p.bloco);
+                decisoes.origem[p.bloco] = 'servidor';
+                decisoes.motivos[p.bloco] = 'Cláusula opcional mantida pelo servidor';
+            });
+            montar();
+        });
     }
 
     function acao(btn) {

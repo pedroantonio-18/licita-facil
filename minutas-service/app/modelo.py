@@ -150,7 +150,8 @@ def _nivel_do_estilo(estilo: str, estilos: dict[str, tuple[str, str]]) -> tuple[
     while atual and atual not in vistos:
         vistos.add(atual)
         nome = estilos.get(atual, ("", ""))[0]
-        if "opcional" in nome.lower():
+        # "Nível 2-Opcional", "Nível 3-R", "Nível 2 -Red": redação opcional da AGU (decide-se manter ou não)
+        if "opcional" in nome.lower() or re.search(r"-\s*r(ed)?\s*$", nome.strip(), re.IGNORECASE):
             opcional = True
         m = re.fullmatch(r"N[ií]vel\s*0?(\d)", nome.strip(), re.IGNORECASE)
         if m:
@@ -222,8 +223,13 @@ _PONTE = re.compile(r"[\s.\-/()\[\]]{1,3}")   # separador preto entre pedaços d
 
 def _opcoes(texto: str) -> list[str]:
     """"[menor preço] OU [maior desconto]" / "[SIM] / [NÃO]" → lista de opções; campo livre → []."""
-    if "[" not in texto:           # "ÓRGÃO OU ENTIDADE PÚBLICA" é um campo só, não uma escolha
-        return []
+    if "[" not in texto:
+        # "ÓRGÃO OU ENTIDADE PÚBLICA" (tudo em maiúsculas) é um campo só; "Termo de Contrato OU aceitar
+        # instrumento equivalente" é escolha entre duas redações
+        if texto.strip().isupper() or not re.search(r"\S\s+OU\s+\S", texto):
+            return []
+        partes = re.split(r"\s+OU\s+", texto.strip())
+        return [p.strip() for p in partes if p.strip()] if len(partes) >= 2 else []
     partes = re.split(r"\s+OU\s+|\s+/\s+", texto.strip())
     if len(partes) < 2:
         return []
@@ -249,6 +255,31 @@ def _marcar_campos(bloco_id: str, trechos: list[Trecho], titulo: bool = False) -
             saida.extend([fecha, resto])
         else:
             saida.append(t)
+    # "o prazo de XX (⟦valor por extenso⟧) dias": a AGU deixa o "XX (" em preto; ele entra no campo,
+    # senão o preenchimento vira "XX (5 (cinco))"
+    for k in range(1, len(saida)):
+        if not (saida[k].variavel and "extenso" in saida[k].texto.lower()):
+            continue
+        # junta até 3 pedaços pretos anteriores ("XX" e " (" às vezes vêm com formatação diferente)
+        inicio = k
+        while inicio > 0 and k - inicio < 3 and not saida[inicio - 1].variavel:
+            inicio -= 1
+            juntos = "".join(t.texto for t in saida[inicio:k])
+            m = re.search(r"\b[Xx]{2,}\s*\(\s*$", juntos)
+            if m:
+                pos = m.start()
+                novos = []
+                for t in saida[inicio:k]:
+                    if pos >= len(t.texto):                     # pedaço todo antes do marcador
+                        novos.append(t); pos -= len(t.texto)
+                        continue
+                    if pos > 0:
+                        novos.append(Trecho(t.texto[:pos], False, t.tema, t.negrito, t.italico, t.sublinhado))
+                    novos.append(Trecho(t.texto[pos:], True, t.tema, t.negrito, t.italico, t.sublinhado))
+                    pos = 0
+                saida[inicio:k] = novos
+                break
+    saida = [t for t in saida if t.texto]
     n, i = 0, 0
     while i < len(saida):
         if not (saida[i].variavel and saida[i].texto.strip()):

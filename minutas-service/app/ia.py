@@ -37,6 +37,7 @@ MIN_MOTIVO = 15
 ACOES_POR_TIPO = {
     "campo": {"preencher", "manter_trecho", "retirar_trecho", "remover", "reescrever"},
     "clausula": {"manter", "remover"},
+    "opcional": {"manter", "remover"},
     "alternativa": {"manter", "remover"},
     "marcador": {"reescrever", "remover"},
     "referencia": {"reescrever", "remover"},
@@ -95,7 +96,10 @@ def pendencias_para_ia(modelo: Modelo, minuta: Minuta, decididos: set[str]) -> l
             if not any(t.campo == c.id and t.variavel for t in b.trechos):
                 continue                                    # já preenchido pelo formulário
             tipo = "escolha" if c.opcoes else ("lacuna" if LACUNA.search(c.texto) else "trecho_opcional")
-            campos.append({"id": c.id, "texto": c.texto, "tipo": tipo, "opcoes": c.opcoes})
+            campo = {"id": c.id, "texto": c.texto, "tipo": tipo, "opcoes": c.opcoes}
+            if POR_EXTENSO.search(c.texto):
+                campo["formato"] = "número seguido do extenso entre parênteses, ex.: 30 (trinta) ou R$ 100,00 (cem reais)"
+            campos.append(campo)
         alternativa = None
         if p.tipo == "alternativa" and p.relacionado in blocos:
             alternativa = {"bloco": p.relacionado, "texto": blocos[p.relacionado].texto}
@@ -112,7 +116,9 @@ Restam as PENDÊNCIAS abaixo. Para cada uma, decida com base EXCLUSIVAMENTE no T
 
 Regras:
 1. Mexa apenas nos blocos listados. Não invente informação: se o TR não permitir decidir, coloque o
-   bloco em "sem_informacao" com o motivo (o servidor decidirá).
+   bloco em "sem_informacao" com o motivo (o servidor decidirá). O silêncio do TR NÃO justifica remover
+   cláusula do modelo: só remova quando o TR indicar que ela não se aplica, citando esse trecho.
+   Nunca crie valores (percentuais, prazos, quantias) que não estejam no TR.
 2. Toda decisão precisa de "motivo" (frase curta). Para "preencher", "reescrever", "manter" e
    "manter_trecho", copie em "evidencia" um trecho LITERAL do TR (até 300 caracteres) que sustenta a decisão —
    ele será conferido no documento; trecho que não existir no TR invalida a sugestão.
@@ -122,8 +128,10 @@ Regras:
      (ex.: "5 (cinco)"). Não deixe colchetes nem "XX".
    - "manter_trecho" / "retirar_trecho": para campo "trecho_opcional" (informe "campo").
    - "manter" / "remover": cláusula opcional inteira; nas alternativas "OU", "manter" fica com
-     aquela redação e a outra sai.
+     aquela redação e a outra sai. Atenção ao sentido: numa lista de quem NÃO pode participar,
+     remover um item significa permitir a participação. Ao remover um item, os subitens saem junto.
    - "reescrever": texto completo e final do bloco em "texto", alterando só o necessário (sem a numeração).
+     Não reescreva para negar a cláusula ou dizer que não se aplica: nesse caso use "remover".
 4. Preserve a redação da AGU: não reescreva o que não precisa mudar.
 5. Linguagem formal; não acrescente cláusulas novas.
 
@@ -193,6 +201,28 @@ def evidencia_no_tr(evidencia: str, tr_normalizado: str) -> bool:
     return fuzz.partial_ratio(e, tr_normalizado) >= 90
 
 
+# Campo que pede número + extenso: "XX (valor por extenso)", "XX (xxxxx)", "XX (valor ou percentual por extenso)"
+POR_EXTENSO = re.compile(r"\((?:valor[^)]*extenso|x{3,})\)", re.IGNORECASE)
+
+
+def _tokens(texto: str) -> set[str]:
+    """Números e palavras de 4+ letras: para conferir se a evidência fala do valor sugerido."""
+    t = _n(texto)
+    return set(re.findall(r"\d+(?:[.,]\d+)*", t)) | {w for w in re.findall(r"[a-z]{4,}", t)
+                                                      if w not in _GENERICAS}
+
+
+# Palavras que aparecem em qualquer TR/cláusula e não mostram que o trecho trata do assunto
+_GENERICAS = {"para", "pelo", "pela", "como", "sendo", "serao", "sera", "sobre", "deste", "desta", "neste",
+              "nesta", "conforme", "caso", "objeto", "contratacao", "empresa", "empresas", "servico", "servicos",
+              "termo", "referencia", "administracao", "fornecedor", "fornecedores", "aviso", "dispensa",
+              "licitacao", "item", "itens", "quando", "previsto", "prevista", "forma", "seus", "suas", "pela"}
+
+
+def _trata_do_assunto(evidencia: str, texto_bloco: str) -> bool:
+    return bool(_tokens(evidencia) & _tokens(texto_bloco))
+
+
 def _opcao_valida(valor: str, opcoes: list[str]) -> bool:
     v = _n(valor)
     return any(v == _n(o) or v.startswith(_n(o) + " ") for o in opcoes)
@@ -234,13 +264,29 @@ def validar(itens: list[ItemPendente], resposta: str, texto_tr: str) -> Resultad
         if len(motivo) < MIN_MOTIVO:
             descarta(bloco, "Sem motivo")
             continue
-        if acao in EXIGE_EVIDENCIA and not evidencia:
+        campos_s = s.get("campos") if isinstance(s.get("campos"), dict) else {}
+        textos_modelo = {c["id"]: c["texto"] for c in it.campos}
+        # Repetir o valor do próprio modelo ("Lei nº 14.133, de 2021") ou manter cláusula opcional
+        # pelo estilo (redação padrão da AGU) não exige trecho do TR
+        so_repete_modelo = acao == "preencher" and campos_s and all(
+            _n(str(v)) == _n(textos_modelo.get(k, "")) for k, v in campos_s.items())
+        exige = acao in EXIGE_EVIDENCIA and not so_repete_modelo and not (it.tipo == "opcional" and acao == "manter")
+        if exige and not evidencia:
             descarta(bloco, "Sem trecho do TR que sustente a decisão")
             continue
         if evidencia and not evidencia_no_tr(evidencia, tr_n):
             descarta(bloco, "O trecho citado como evidência não foi encontrado no TR")
             continue
 
+        # Remover, ou adotar cláusula opcional vermelha, só com trecho do TR que trate daquela cláusula:
+        # o silêncio do TR não justifica tirar redação da AGU (a SELIT mantém OSCIP, lances automáticos...)
+        texto_bloco = re.sub(r"⟦[^:]+: ", "", it.texto).replace("⟧", "")
+        if it.alternativa:
+            texto_bloco += " " + it.alternativa["texto"]
+        if acao == "remover" or (acao == "manter" and it.tipo == "clausula"):
+            if not evidencia or not _trata_do_assunto(evidencia, texto_bloco):
+                descarta(bloco, "Sem trecho do TR que trate desta cláusula: fica para decisão do servidor")
+                continue
         texto_motivo = motivo + (f" — TR: “{evidencia[:300]}”" if evidencia else "")
         d = r.decisoes
         if acao == "preencher":
@@ -255,6 +301,11 @@ def validar(itens: list[ItemPendente], resposta: str, texto_tr: str) -> Resultad
                     erro = f"Valor do campo {cid} vazio ou com marcador do modelo"
                 elif validos[cid]["opcoes"] and not _opcao_valida(valor, validos[cid]["opcoes"]):
                     erro = f"Valor do campo {cid} não é uma das opções do modelo"
+                elif POR_EXTENSO.search(validos[cid]["texto"]) and not re.search(r"\d.*\(.+\)", valor):
+                    erro = f"Valor do campo {cid} fora do padrão do modelo (número e extenso, ex.: “30 (trinta)”)"
+                elif (evidencia and _n(valor) != _n(validos[cid]["texto"])
+                        and not _tokens(valor) & _tokens(evidencia)):
+                    erro = f"O trecho do TR citado não menciona o valor sugerido para {cid}"
                 elif len(valor) > 1000:
                     erro = f"Valor do campo {cid} longo demais"
                 else:
@@ -294,6 +345,14 @@ def validar(itens: list[ItemPendente], resposta: str, texto_tr: str) -> Resultad
                 continue
             if fuzz.token_set_ratio(_n(original), _n(novo)) < 50:
                 descarta(bloco, "Texto reescrito muito diferente do modelo da AGU")
+                continue
+            if re.search(r"\bnao\b", _n(novo)) and not re.search(r"\bnao\b", _n(original)):
+                descarta(bloco, "Para dizer que a cláusula não se aplica, a ação é remover, não reescrever")
+                continue
+            numeros = lambda x: set(re.findall(r"\d+(?:[.,]\d+)*", _n(x)))
+            novos = numeros(novo) - numeros(original)
+            if novos and not novos <= numeros(evidencia):
+                descarta(bloco, f"O texto reescrito traz valores que não estão no trecho do TR citado ({', '.join(sorted(novos))})")
                 continue
             d.textos[bloco] = novo
             d.origem[bloco] = "ia"
