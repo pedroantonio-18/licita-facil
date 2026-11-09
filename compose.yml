@@ -10,6 +10,7 @@ services:
     depends_on:
       - pdf-service
       - data-crossing
+      - juntada-service
 
   pdf-service:
     build:
@@ -47,5 +48,21 @@ services:
       - CPF_IGNORADOS=${CPF_IGNORADOS:-}
     restart: unless-stopped
 
+  # Juntada de documentos: confere as certidões e monta o PDF para o SEI.
+  juntada-service:
+    build:
+      context: ./juntada-service
+      dockerfile: Dockerfile
+    image: juntada-service:latest
+    container_name: juntada-service
+    ports:
+      - "8002:8002"
+    volumes:
+      - juntada-sessoes:/app/data   # arquivos das sessões (apagados após 48 h)
+    environment:
+      - JUNTADA_CONSULTA_TCU=${JUNTADA_CONSULTA_TCU:-0}   # 1 só se a TI liberar saída para o TCU
+    restart: unless-stopped
+
 volumes:
   data-crossing-db:
+  juntada-sessoes:

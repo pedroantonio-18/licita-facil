@@ -24,7 +24,8 @@ function initNavigation() {
     'pdf-merger': 'Mesclar PDFs',
     'pdf-to-excel': 'Converter PDF para XLSX',
     'gemini-test': 'Playground Gemini',
-    'conluio': 'Análise de Conluio'
+    'conluio': 'Análise de Conluio',
+    'juntada': 'Juntada de Documentos'
   };
 
   function navigateTo(targetId) {
