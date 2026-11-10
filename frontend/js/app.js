@@ -7,6 +7,7 @@ import { initGeminiTest } from './geminiTest.js';
 import { initConluio } from './conluio.js';
 import { initJuntada } from './juntada.js';
 import { initMinutas } from './minutas.js';
+import { initEnquadramento } from './enquadramento.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   initSidebar();
@@ -18,4 +19,5 @@ document.addEventListener('DOMContentLoaded', () => {
   initConluio();
   initJuntada();
   initMinutas();
+  initEnquadramento();
 });

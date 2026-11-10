@@ -2012,3 +2012,125 @@ details.minutas-secao > summary { cursor: pointer; margin-bottom: 0.6rem; }
 .minutas-opcional .minutas-acoes { margin-left: auto; }
 .minutas-opcional .minutas-nota { flex-basis: 100%; }
 .minutas-opcional .conluio-btn-secondary { padding: 0.25rem 0.7rem; }
+
+/* ============================================================
+   Enquadramento de despesas
+   ============================================================ */
+
+.enq-tabela {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.4rem 0;
+  font-size: var(--font-size-sm);
+}
+
+.enq-tabela th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  padding: 0.2rem 0.3rem;
+}
+
+.enq-tabela td { padding: 0.2rem 0.3rem; }
+.enq-valor { max-width: 140px; text-align: right; }
+
+.enq-cartao {
+  border: 1px solid var(--color-border);
+  border-left: 5px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  padding: 0.8rem 1rem;
+}
+
+.enq-cartao.enq-pregao,
+.enq-cartao.enq-concorrencia { border-left-color: #4f6bd6; }
+
+.enq-modalidade {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+
+.enq-numeros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.2rem;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.enq-numeros strong { color: var(--color-text); }
+
+.enq-avisos {
+  margin: 0.6rem 0 0;
+  padding-left: 1.1rem;
+  font-size: var(--font-size-sm);
+  color: #8a5a00;
+}
+
+@media (max-width: 700px) {
+  .enq-tabela thead { display: none; }
+  .enq-tabela tr { display: grid; grid-template-columns: 1fr; gap: 0.2rem; margin-bottom: 0.5rem; }
+  .enq-valor { max-width: none; }
+}
+
+.minutas-manual {
+  border: 1px solid #c9d6f5;
+  background: #f5f8ff;
+  border-radius: var(--radius-md);
+  padding: 0.8rem 1rem;
+  font-size: var(--font-size-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.minutas-manual ol { margin: 0; padding-left: 1.2rem; }
+.minutas-manual ol li { margin: 0.15rem 0; }
+
+.minutas-aviso-ia {
+  margin: 0;
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--radius-sm);
+  background: #fdf0d5;
+  color: #8a5a00;
+}
+
+.minutas-manual-linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.6rem 1rem;
+}
+
+/* Análise de Conluio — modo "minha IA" (copiar e colar) */
+.conluio-modos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-top: 0.4rem;
+}
+
+.conluio-manual-opcoes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.3rem;
+}
+
+.conluio-manual {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  border: 1px dashed #c9d6f5;
+  background: #f5f8ff;
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.8rem;
+  font-size: var(--font-size-sm);
+}
+
+.conluio-manual[hidden] { display: none; }
+.conluio-manual ol { margin: 0; padding-left: 1.1rem; }
+.conluio-manual-status { margin: 0; font-size: 0.8rem; }
+.conluio-manual-status.success { color: var(--color-primary-darker); }
+.conluio-manual-status.error { color: #b42318; }
+.conluio-parecer-manual { margin-top: 1rem; }

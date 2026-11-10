@@ -12,6 +12,7 @@ services:
       - data-crossing
       - juntada-service
       - minutas-service
+      - enquadramento-service
 
   pdf-service:
     build:
@@ -78,7 +79,21 @@ services:
       - minutas-modelos:/app/modelos
     restart: unless-stopped
 
+  # Enquadramento de despesas: dispensa ou pregão, fracionamento, ME/EPP e a Informação para o SEI.
+  enquadramento-service:
+    build:
+      context: ./enquadramento-service
+      dockerfile: Dockerfile
+    image: enquadramento-service:latest
+    container_name: enquadramento-service
+    ports:
+      - "8004:8004"
+    volumes:
+      - enquadramento-dados:/app/data   # PCAs carregados pela tela (um por exercício)
+    restart: unless-stopped
+
 volumes:
   data-crossing-db:
   juntada-sessoes:
   minutas-modelos:
+  enquadramento-dados:
