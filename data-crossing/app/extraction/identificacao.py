@@ -36,7 +36,33 @@ _PREFIXOS = re.compile(
 def _limpar_nome(nome: str) -> str:
     nome = " ".join(nome.split()).strip(" ,.-")
     nome = _PREFIXOS.sub("", nome).strip(" ,.-:")
+    # sobra de número antes do nome ("0001-81 ALFA LTDA", "2023 DA EMPRESA …" já tratado acima)
+    nome = re.sub(r"^(?:\S*\d\S*\s+(?:-\s+)?)+", "", nome).strip(" ,.-:")
     return nome
+
+
+# O CNPJ do contador/escritório de contabilidade costuma vir no rodapé de toda página
+# ("Elaborado por: … CONTÁBIL LTDA - CNPJ …") e ganharia por frequência.
+_CONTEXTO_CONTADOR = re.compile(r"CONTAB|CONTADOR|CONT[ÁA]BIL|\bCRC\b|ELABORADO POR|ESCRIT[ÓO]RIO", re.IGNORECASE)
+# Contextos em que o CNPJ é o da própria empresa
+_CONTEXTO_EMPRESA = re.compile(
+    r"FORNECEDOR\s+CNPJ|INSCRIT[AO]\s+NO\s+CNPJ|CNPJ\s+SOB\s+O\s+N|RAZ[ÃA]O\s+SOCIAL|NOME\s+EMPRESARIAL|"
+    r"DENOMINA[ÇC][ÃA]O|OUTORGANTE|CONTRATANTE|N[ÚU]MERO DE INSCRI[ÇC][ÃA]O", re.IGNORECASE)
+
+
+def _pontuacao(texto: str, posicoes: list[int]) -> int:
+    """Pontos de um CNPJ: cada contexto diferente conta uma vez (rodapé repetido em toda página
+    conta uma só), contexto de contador não conta, contexto típico da empresa vale mais."""
+    pontos, vistos = 0, set()
+    for pos in posicoes:
+        antes = " ".join(texto[max(0, pos - 90):pos].split())
+        if antes in vistos:
+            continue
+        vistos.add(antes)
+        if _CONTEXTO_CONTADOR.search(antes[-60:]):
+            continue
+        pontos += 3 if _CONTEXTO_EMPRESA.search(antes[-60:]) else 1
+    return pontos
 
 
 def identificar_empresa(textos: list[str]) -> dict:
@@ -61,15 +87,14 @@ def identificar_empresa(textos: list[str]) -> dict:
     if not ocorrencias:
         return {"cnpj": None, "cnpj_formatado": None, "razao_social": None, "ocorrencias_cnpj": 0}
 
-    # Mais frequente; em empate, a matriz (/0001)
-    cnpj = max(ocorrencias, key=lambda c: (len(ocorrencias[c]), c[8:12] == "0001"))
+    cnpj = max(ocorrencias, key=lambda c: (_pontuacao(texto, ocorrencias[c]), c[8:12] == "0001"))
 
     candidatos: Counter[str] = Counter()
     for pos in ocorrencias[cnpj]:
         trecho = texto[max(0, pos - _JANELA): pos + _JANELA]
         for m in _RAZAO_SOCIAL.finditer(trecho.upper()):
             nome = _limpar_nome(m.group(1))
-            if len(nome.split()) >= 2:
+            if len(nome.split()) >= 2 and not _CONTEXTO_CONTADOR.search(nome):   # escritório de contabilidade
                 candidatos[nome] += 1
 
     razao = None

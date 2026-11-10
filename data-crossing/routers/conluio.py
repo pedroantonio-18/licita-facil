@@ -75,13 +75,20 @@ def _serializar_pessoa(p, arquivo: str) -> dict:
     }
 
 
-def _campo_dict(c, nome_empresa: str) -> dict:
+def _fonte_ia(dados) -> str:
+    """Quem extraiu os dados: "Gemini" (chave configurada) ou a IA do servidor (copiar e colar)."""
+    if getattr(dados, "via", None) == "manual":
+        return dados.modelo or "IA do servidor"
+    return "Gemini"
+
+
+def _campo_dict(c, nome_empresa: str, fonte: str = "Gemini") -> dict:
     """Converte um CampoImport para o formato interno da sessão."""
     return {
         "valor":           re.sub(r'\D', '', c.valor),
         "valor_formatado": c.valor_formatado,
         "pagina":          0,
-        "trecho":          c.trecho or f"Extraído pelo Gemini — {nome_empresa}",
+        "trecho":          c.trecho or f"Extraído por {fonte} — {nome_empresa}",
         "arquivo":         "gemini",
     }
 
@@ -185,8 +192,12 @@ class EmpresaImport(BaseModel):
     telefones: list[CampoImport] = []
     pessoas:   list[PessoaImport] = []
     enderecos: list[EnderecoImport] = []
-    # Modelo do Gemini que de fato respondeu (o navegador alterna entre modelos)
+    # Modelo do Gemini que de fato respondeu (o navegador alterna entre modelos) ou, no modo
+    # "minha IA", a ferramenta que o servidor usou (ChatGPT, Claude…)
     modelo:    Optional[str] = None
+    # "gemini" (chave configurada, chamada pelo navegador) | "manual" (servidor copiou o pedido
+    # para a IA que usa e colou a resposta de volta)
+    via:       Optional[str] = "gemini"
 
 
 class ParecerImport(BaseModel):
@@ -337,10 +348,11 @@ async def importar_dados_gemini(dados: EmpresaImport):
     empresa_id  = re.sub(r'\D', '', dados.empresa_cnpj)
     processo_id = dados.processo_id
 
-    cnpjs     = [_campo_dict(c, dados.empresa_nome) for c in dados.cnpjs]
-    cpfs      = [_campo_dict(c, dados.empresa_nome) for c in dados.cpfs]
-    ceps      = [_campo_dict(c, dados.empresa_nome) for c in dados.ceps]
-    telefones = [_campo_dict(t, dados.empresa_nome) for t in dados.telefones]
+    fonte     = _fonte_ia(dados)
+    cnpjs     = [_campo_dict(c, dados.empresa_nome, fonte) for c in dados.cnpjs]
+    cpfs      = [_campo_dict(c, dados.empresa_nome, fonte) for c in dados.cpfs]
+    ceps      = [_campo_dict(c, dados.empresa_nome, fonte) for c in dados.ceps]
+    telefones = [_campo_dict(t, dados.empresa_nome, fonte) for t in dados.telefones]
 
     cnpjs, cnpjs_invalidos = _validar_campos(cnpjs, cnpj_valido, format_cnpj, "cnpj", dados.empresa_nome)
     cpfs, cpfs_invalidos = _validar_campos(cpfs, cpf_valido, format_cpf, "cpf", dados.empresa_nome)
@@ -354,7 +366,7 @@ async def importar_dados_gemini(dados: EmpresaImport):
             **p.model_dump(),
             "funcao":  p.funcao or "não identificada",
             "pagina":  0,
-            "trecho":  f"Extraído pelo Gemini — {dados.empresa_nome}",
+            "trecho":  f"Extraído por {fonte} — {dados.empresa_nome}",
             "arquivo": "gemini",
         }
         cpf = re.sub(r'\D', '', p.cpf or "")
@@ -372,7 +384,7 @@ async def importar_dados_gemini(dados: EmpresaImport):
                 "valor":           cpf,
                 "valor_formatado": format_cpf(cpf),
                 "pagina":          0,
-                "trecho":          f"CPF na qualificação de {p.nome} — Gemini, {dados.empresa_nome}",
+                "trecho":          f"CPF na qualificação de {p.nome} — {fonte}, {dados.empresa_nome}",
                 "arquivo":         "gemini",
             })
             cpfs_presentes.add(cpf)
@@ -382,7 +394,8 @@ async def importar_dados_gemini(dados: EmpresaImport):
         "id":             empresa_id,
         "nome":           dados.empresa_nome,
         "cnpj_principal": empresa_id,
-        "origem":         f"Gemini {dados.modelo} (via navegador)" if dados.modelo else "Gemini (via navegador)",
+        "origem":         (f"{fonte} (resposta copiada e colada pelo servidor)" if dados.via == "manual"
+                           else f"Gemini {dados.modelo} (via navegador)" if dados.modelo else "Gemini (via navegador)"),
         "cnpjs":          cnpjs,
         "cpfs":           cpfs,
         "ceps":           ceps,

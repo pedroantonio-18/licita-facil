@@ -4,10 +4,14 @@
  *
  * Fluxo:
  * 1. Servidor seleciona os PDFs de cada empresa participante
- * 2. Com chave do Gemini: o navegador (que tem internet) envia os PDFs ao Gemini
- *    e importa o JSON no data-crossing (/conluio/importar).
- *    Sem chave: os PDFs vão direto ao data-crossing (/conluio/processar),
- *    que extrai localmente, sem internet.
+ * 2. Três modos de extração:
+ *    - chave do Gemini: o navegador (que tem internet) envia os PDFs ao Gemini
+ *      e importa o JSON no data-crossing (/conluio/importar);
+ *    - "minha IA": o servidor copia o pedido para a IA que já usa (ChatGPT, Claude…),
+ *      anexa os PDFs da empresa lá e cola a resposta aqui — mesma importação e
+ *      mesma validação (CPF/CNPJ por dígito verificador);
+ *    - sem IA: os PDFs vão ao data-crossing (/conluio/processar), que extrai
+ *      localmente, sem internet.
  * 3. data-crossing cruza os dados (regras R01–R08, determinísticas)
  * 4. Opcional, com chave: o data-crossing monta o prompt do parecer, o navegador
  *    o envia ao Gemini e devolve a resposta para validação (padrão de relé)
@@ -121,6 +125,41 @@ function esc(texto) {
     return div.innerHTML;
 }
 
+function lerPreferencia(chave, padrao) {
+    try { return localStorage.getItem(chave) || padrao; } catch { return padrao; }
+}
+
+function salvarPreferencia(chave, valor) {
+    try { localStorage.setItem(chave, valor); } catch { /* sem armazenamento */ }
+}
+
+/** Resposta colada de IA na web: tira bloco de código, aspas tipográficas e vírgula sobrando. */
+function normalizarJsonColado(texto) {
+    let t = texto.replace(/[\u201c\u201d]/g, '"');
+    const bloco = t.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (bloco) t = bloco[1];
+    return t.replace(/,\s*([}\]])/g, '$1');
+}
+
+async function copiarTexto(texto) {
+    try {
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(texto);
+            return true;
+        }
+    } catch { /* cai no método antigo */ }
+    const area = document.createElement('textarea');
+    area.value = texto;
+    area.setAttribute('readonly', '');
+    area.style.position = 'fixed';
+    area.style.opacity = '0';
+    document.body.appendChild(area);
+    area.select();
+    const ok = document.execCommand('copy');
+    area.remove();
+    return ok;
+}
+
 function chaveInicial() {
     try {
         return import.meta.env?.VITE_GEMINI_API_KEY || localStorage.getItem(CHAVE_STORAGE) || '';
@@ -142,6 +181,8 @@ export function initConluio() {
     let empresas = [];   // [{nome, cnpj, arquivos: [File], dadosGemini: null|object, elemento}]
     let processoId = '';
     let apiKey = chaveInicial();
+    let modo = lerPreferencia('conluio.modo', '');          // 'gemini' | 'manual' | 'local'
+    let ferramenta = lerPreferencia('conluio.ferramenta', 'ChatGPT');
 
     // Referências da UI
     const apiKeyInput      = section.querySelector('#conluio-api-key');
@@ -153,6 +194,34 @@ export function initConluio() {
     const analisarBtn      = section.querySelector('#conluio-analisar');
     const statusMsg        = section.querySelector('.conluio-status');
     const resultsContainer = section.querySelector('.conluio-results');
+
+    const modosDiv = document.createElement('div');
+    modosDiv.className = 'conluio-modos';
+    modosDiv.innerHTML = `
+        <span class="conluio-label">Como ler os documentos das empresas</span>
+        <label class="conluio-check"><input type="radio" name="conluio-modo" value="gemini"> Com a chave do Gemini (automático)</label>
+        <label class="conluio-check"><input type="radio" name="conluio-modo" value="manual"> Usar minha IA (copiar e colar: ChatGPT, Claude, Gemini…)</label>
+        <label class="conluio-check"><input type="radio" name="conluio-modo" value="local"> Sem IA (leitura local no servidor: lê CNPJ, telefone e endereço; não identifica os sócios)</label>
+        <div class="conluio-manual-opcoes" hidden>
+            <p class="minutas-aviso-ia">Use apenas ferramentas de IA autorizadas pelo TRF1. Os documentos das empresas têm dados
+               pessoais (CPF, endereço, filiação) e ferramentas gratuitas podem usar o conteúdo enviado para outros fins.</p>
+            <label class="minutas-campo-inline"><span>Ferramenta</span>
+                <select class="conluio-input conluio-ferramenta">${['ChatGPT', 'Claude', 'Gemini', 'Copilot', 'Outra']
+                    .map(o => `<option${o === ferramenta ? ' selected' : ''}>${o}</option>`).join('')}</select></label>
+        </div>`;
+    modoInfo.after(modosDiv);
+    modosDiv.addEventListener('change', e => {
+        if (e.target.name === 'conluio-modo') {
+            modo = e.target.value;
+            salvarPreferencia('conluio.modo', modo);
+            atualizarModo();
+            atualizarBotao();
+        }
+        if (e.target.classList.contains('conluio-ferramenta')) {
+            ferramenta = e.target.value;
+            salvarPreferencia('conluio.ferramenta', ferramenta);
+        }
+    });
 
     apiKeyInput.value = apiKey;
     atualizarModo();
@@ -179,12 +248,27 @@ export function initConluio() {
         return apiKey.length > 10;
     }
 
+    function modoAtual() {
+        if (modo === 'gemini' && !temChave()) return 'manual';
+        if (!modo) return temChave() ? 'gemini' : 'local';
+        return modo;
+    }
+
     function atualizarModo() {
-        parecerCheck.disabled = !temChave();
-        if (!temChave()) parecerCheck.checked = false;
-        modoInfo.textContent = temChave()
-            ? 'Extração pelo Gemini (via navegador). O parecer de IA é opcional.'
-            : 'Sem chave: extração local no servidor, sem internet. O relatório sai completo, sem a seção de parecer de IA.';
+        const atual = modoAtual();
+        modosDiv.querySelectorAll('input[name="conluio-modo"]').forEach(r => {
+            r.checked = r.value === atual;
+            if (r.value === 'gemini') r.disabled = !temChave();
+        });
+        modosDiv.querySelector('.conluio-manual-opcoes').hidden = atual !== 'manual';
+        parecerCheck.disabled = atual === 'local';
+        if (atual === 'local') parecerCheck.checked = false;
+        modoInfo.textContent = {
+            gemini: 'Extração pelo Gemini (via navegador). O parecer de IA é opcional.',
+            manual: 'Em cada empresa: copie o pedido, anexe os PDFs da empresa na sua IA e cole a resposta. O parecer, se marcado, é pedido depois do cruzamento.',
+            local: 'Sem IA: extração local no servidor, sem internet. O relatório sai completo, sem a seção de parecer de IA.',
+        }[atual];
+        empresas.forEach(e => { e.elemento.querySelector('.conluio-manual').hidden = atual !== 'manual'; });
     }
 
     // ---------------------------------------------------------------------------
@@ -219,6 +303,18 @@ export function initConluio() {
                 <span class="dropzone-hint">Suporta múltiplos arquivos .pdf</span>
             </div>
             <ul class="empresa-arquivos-lista"></ul>
+            <div class="conluio-manual" hidden>
+                <ol>
+                    <li>Clique em <strong>Copiar pedido</strong>.</li>
+                    <li>Na sua IA, <strong>anexe os PDFs desta empresa</strong> e cole o pedido.</li>
+                    <li>Copie a resposta inteira e cole abaixo.</li>
+                </ol>
+                <button type="button" class="conluio-btn-secondary conluio-copiar-pedido">Copiar pedido</button>
+                <textarea class="conluio-input conluio-resposta" rows="4"
+                    placeholder="Cole aqui a resposta da IA para esta empresa (pode colar tudo)"></textarea>
+                <button type="button" class="conluio-btn-secondary conluio-usar-resposta">Conferir resposta</button>
+                <p class="conluio-manual-status"></p>
+            </div>
             <p class="empresa-status"></p>
         `;
         empresa.elemento = bloco;
@@ -257,6 +353,14 @@ export function initConluio() {
             fileInput.value = '';
         });
 
+        bloco.querySelector('.conluio-manual').hidden = modoAtual() !== 'manual';
+        bloco.querySelector('.conluio-copiar-pedido').addEventListener('click', async () => {
+            const ok = await copiarTexto(pedidoExtracao(empresa));
+            setStatusManual(empresa, ok ? 'Pedido copiado. Cole na sua IA e anexe os PDFs desta empresa.'
+                                        : 'Não foi possível copiar automaticamente.', ok ? 'success' : 'error');
+        });
+        bloco.querySelector('.conluio-usar-resposta').addEventListener('click', () => usarRespostaManual(empresa));
+
         removeBtn.addEventListener('click', () => {
             empresas = empresas.filter(e => e !== empresa);
             bloco.remove();
@@ -279,6 +383,9 @@ export function initConluio() {
         if (pdfs.length === 0) return;
 
         empresa.arquivos.push(...pdfs);
+        if (empresa.dadosGemini?._via === 'manual') {
+            setStatusManual(empresa, 'Os arquivos mudaram: copie o pedido de novo e cole a nova resposta.', 'error');
+        }
         empresa.dadosGemini = null;
         renderArquivos(empresa);
         atualizarBotao();
@@ -322,6 +429,46 @@ export function initConluio() {
             setStatusEmpresa(empresa, `Não foi possível sugerir os dados: ${erro.message}. Preencha manualmente.`, 'error');
         }
         atualizarBotao();
+    }
+
+    function pedidoExtracao(empresa) {
+        const arquivos = empresa.arquivos.map(f => `- ${f.name}`).join('\n') || '- (nenhum arquivo selecionado)';
+        return `Os documentos da empresa ${empresa.nome || '[razão social]'} (CNPJ ${empresa.cnpj || '[CNPJ]'}) estão ANEXADOS a esta conversa:
+${arquivos}
+Se os anexos não estiverem disponíveis, responda apenas {"erro": "anexos não recebidos"}.
+${PROMPT_EXTRACAO}`;
+    }
+
+    function setStatusManual(empresa, texto, tipo = '') {
+        const el = empresa.elemento.querySelector('.conluio-manual-status');
+        el.textContent = texto;
+        el.className = `conluio-manual-status ${tipo}`;
+    }
+
+    /** Confere a resposta colada e guarda para a importação (a validação de CPF/CNPJ é no data-crossing). */
+    function usarRespostaManual(empresa) {
+        const texto = empresa.elemento.querySelector('.conluio-resposta').value.trim();
+        empresa.dadosGemini = null;
+        if (!texto) { setStatusManual(empresa, 'Cole a resposta da IA antes de conferir.', 'error'); return; }
+        let dados;
+        try {
+            dados = extrairObjetoJson(normalizarJsonColado(texto));
+        } catch {
+            setStatusManual(empresa, 'Não encontrei o JSON na resposta. Peça à IA para responder só no formato pedido.', 'error');
+            return;
+        }
+        if (dados.erro) {
+            setStatusManual(empresa, `A IA informou: ${dados.erro}. Anexe os PDFs desta empresa na conversa e tente de novo.`, 'error');
+            return;
+        }
+        if (!['cnpjs', 'cpfs', 'pessoas'].some(k => Array.isArray(dados[k]))) {
+            setStatusManual(empresa, 'A resposta não está no formato pedido (faltam as listas de CNPJs, CPFs e pessoas).', 'error');
+            return;
+        }
+        empresa.dadosGemini = { ...dados, _modelo: ferramenta, _via: 'manual' };
+        const n = k => (dados[k] || []).length;
+        setStatusManual(empresa, `Resposta recebida: ${n('pessoas')} pessoa(s), ${n('cpfs')} CPF(s), ${n('cnpjs')} CNPJ(s), ` +
+            `${n('enderecos')} endereço(s). CPFs e CNPJs com dígito inválido são separados na análise.`, 'success');
     }
 
     function setStatusEmpresa(empresa, texto, tipo = '') {
@@ -374,8 +521,10 @@ export function initConluio() {
     async function iniciarAnalise() {
         analisarBtn.disabled = true;
         resultsContainer.innerHTML = '';
-        const usarGemini = temChave();
+        const atual = modoAtual();
+        const usarGemini = atual === 'gemini';
         const querParecer = usarGemini && parecerCheck.checked;
+        const querParecerManual = atual === 'manual' && parecerCheck.checked;
         const ocorrencias = [];   // fatos do fluxo que o servidor precisa saber (ex.: fallback)
 
         try {
@@ -408,7 +557,13 @@ export function initConluio() {
                         setStatus(`${prefixo}: Gemini indisponível, extraindo localmente...`, 'loading');
                         await processarLocalmente(empresa);
                     }
+                } else if (atual === 'manual' && empresa.dadosGemini?._via === 'manual') {
+                    setStatus(`${prefixo}: importando a resposta da sua IA...`, 'loading');
+                    await importarNoCrossing(empresa, empresa.dadosGemini);
                 } else {
+                    if (atual === 'manual') {
+                        ocorrencias.push(`"${empresa.nome}": sem resposta da IA colada — usada a extração local.`);
+                    }
                     setStatus(`${prefixo}: extraindo dados localmente...`, 'loading');
                     await processarLocalmente(empresa);
                 }
@@ -445,6 +600,7 @@ export function initConluio() {
 
             resultado.avisos = [...ocorrencias, ...(resultado.avisos || [])];
             renderResultado(resultado, parecer, nomeArquivo, blob, sha256);
+            if (querParecerManual) mostrarParecerManual(resultado, nomeArquivo);
             setStatus(
                 `Relatório gerado: ${resultado.total_achados} achado(s) entre ${resultado.empresas_analisadas} empresas.`,
                 'success'
@@ -513,6 +669,57 @@ export function initConluio() {
         `;
         li.querySelector('.file-action-btn').addEventListener('click', () => downloadBlob(blob, nomeArquivo));
         resultsContainer.querySelector('.session-results-list').appendChild(li);
+    }
+
+    async function mostrarParecerManual(resultado, nomeArquivo) {
+        const painel = document.createElement('section');
+        painel.className = 'minutas-manual conluio-parecer-manual';
+        painel.innerHTML = `
+            <h3>Parecer preliminar com a sua IA</h3>
+            <p class="minutas-aviso-ia">Use apenas ferramentas de IA autorizadas pelo TRF1. O pedido do parecer leva os achados
+               e os nomes, funções e endereços extraídos; os CPFs vão mascarados (***.982.247-**).</p>
+            <ol>
+                <li>Clique em <strong>Copiar pedido do parecer</strong> e cole na sua IA (não precisa anexar nada).</li>
+                <li>Copie a resposta inteira e cole abaixo. Cada afirmação é conferida antes de entrar no relatório.</li>
+            </ol>
+            <button type="button" class="conluio-btn-secondary conluio-copiar-parecer">Copiar pedido do parecer</button>
+            <details><summary>Ver o pedido</summary><textarea class="conluio-input" rows="5" readonly>Preparando…</textarea></details>
+            <textarea class="conluio-input conluio-resposta-parecer" rows="5" placeholder="Cole aqui a resposta da IA"></textarea>
+            <div class="conluio-actions"><button type="button" class="conluio-btn-primary conluio-aplicar-parecer">Aplicar parecer e atualizar o relatório</button></div>`;
+        resultsContainer.appendChild(painel);
+        let prompt = '';
+        try {
+            const pedido = await jsonOuErro(fetch(`${DATA_CROSSING}/conluio/parecer/${encodeURIComponent(processoId)}/prompt`), 'Parecer');
+            prompt = pedido.aplicavel ? pedido.prompt : '';
+            painel.querySelector('details textarea').value = prompt || 'Não há dados para o parecer.';
+        } catch (erro) {
+            painel.querySelector('details textarea').value = erro.message;
+        }
+        painel.querySelector('.conluio-copiar-parecer').addEventListener('click', async () => {
+            const ok = prompt && await copiarTexto(prompt);
+            setStatus(ok ? 'Pedido do parecer copiado. Cole na sua IA.' : 'Não foi possível copiar: abra “Ver o pedido” e copie com Ctrl+C.', ok ? 'success' : 'error');
+        });
+        painel.querySelector('.conluio-aplicar-parecer').addEventListener('click', async () => {
+            const resposta = painel.querySelector('.conluio-resposta-parecer').value.trim();
+            if (!resposta) { setStatus('Cole a resposta da IA antes de aplicar.', 'error'); return; }
+            try {
+                setStatus('Conferindo o parecer...', 'loading');
+                const parecer = await jsonOuErro(fetch(`${DATA_CROSSING}/conluio/parecer/${encodeURIComponent(processoId)}`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ modelo: `${ferramenta} (copiar e colar)`, resposta: normalizarJsonColado(resposta) }),
+                }), 'Parecer');
+                setStatus('Gerando o relatório com o parecer...', 'loading');
+                const { blob, sha256 } = await baixarRelatorio();
+                await saveFile({ name: nomeArquivo, blob, mimeType: 'application/pdf', size: blob.size, source: 'conluio' });
+                renderRecentFiles();
+                downloadBlob(blob, nomeArquivo);
+                renderResultado(resultado, parecer, nomeArquivo, blob, sha256);
+                setStatus(parecer.avaliacao_geral ? 'Relatório atualizado com o parecer.'
+                    : 'Relatório atualizado: a avaliação geral não passou na conferência (detalhes na seção 4).', 'success');
+            } catch (erro) {
+                setStatus(`Erro: ${erro.message}`, 'error');
+            }
+        });
     }
 
     function setStatus(text, type = '') {
@@ -667,6 +874,7 @@ export function initConluio() {
                 pessoas:       dados.pessoas   || [],
                 enderecos:     (dados.enderecos || []).filter(e => e && typeof e.valor === 'string'),
                 modelo:        dados._modelo   || null,
+                via:           dados._via      || 'gemini',
             }),
         }), 'Importação');
     }

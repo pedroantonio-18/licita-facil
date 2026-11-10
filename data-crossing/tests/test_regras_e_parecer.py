@@ -144,7 +144,8 @@ def test_fluxo_parecer_no_relatorio(client):
     prompt = client.get(f"/conluio/parecer/{PROCESSO}/prompt").json()
     assert prompt["aplicavel"] and prompt["ids"][:3] == ["A001", "E1", "E2"]
     assert "A001" in prompt["prompt"]
-    assert prompt["prompt"].count("529.982.247-25") == 1   # CPF só no valor do achado, não no catálogo
+    # CPF só no valor do achado, mascarado (a IA não precisa do número), e nunca no catálogo
+    assert prompt["prompt"].count("***.982.247-**") == 1 and "529.982.247-25" not in prompt["prompt"]
     assert "52998224725" not in prompt["prompt"]
 
     resposta = {"itens": [
