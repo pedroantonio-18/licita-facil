@@ -13,16 +13,25 @@ relatório em PDF para anexar ao processo no SEI.
 
 1. No menu lateral, abra **Análise de Conluio**.
 2. Preencha o **identificador do processo** (ex.: número do processo SEI).
-3. **Chave de API do Gemini** (opcional):
-   - **com chave:** a leitura dos documentos é mais completa — inclui páginas
-     digitalizadas, nomes, cônjuges, filiação e endereços — e permite o parecer
-     preliminar de IA;
-   - **sem chave:** a leitura é feita no servidor e identifica apenas CNPJ, CPF, CEP e
-     telefone em páginas com texto. O relatório avisa essas limitações.
+3. Escolha **como ler os documentos das empresas**:
+   - **Com a chave do Gemini** (se configurada): automático. A leitura é completa —
+     inclui páginas digitalizadas, nomes, cônjuges, filiação e endereços.
+   - **Usar minha IA (copiar e colar)**: em cada empresa, clique em **Copiar pedido**,
+     abra a IA que você usa (ChatGPT, Claude, Gemini…), **anexe os PDFs da empresa**, cole
+     o pedido, copie a resposta inteira e cole no campo da empresa. Clique em **Conferir
+     resposta**: o sistema mostra quantas pessoas, CPFs e CNPJs vieram. CPFs e CNPJs com
+     dígito verificador inválido são separados na análise. Use apenas ferramentas de IA
+     autorizadas pelo TRF1: os documentos têm dados pessoais e ferramentas gratuitas
+     podem usar o conteúdo enviado para outros fins.
+   - **Sem IA**: a leitura é feita no servidor e identifica CNPJ, CPF, CEP e telefone em
+     páginas com texto; não identifica os sócios. O relatório avisa essas limitações.
 4. Clique em **+ Adicionar empresa** para cada licitante e arraste os PDFs dela
    (contrato social, SICAF, procurações…). Razão social e CNPJ são sugeridos a partir
    dos PDFs — **confira** antes de seguir.
-5. Se quiser, marque **Incluir parecer preliminar de IA**.
+5. Se quiser, marque **Incluir parecer preliminar de IA**. No modo "minha IA", o pedido
+   do parecer aparece depois do cruzamento: copie, cole na sua IA (não precisa anexar
+   nada), cole a resposta e clique em **Aplicar parecer e atualizar o relatório**. No
+   pedido do parecer os CPFs vão mascarados (***.982.247-**).
 6. Clique em **Analisar coincidências**. O relatório é baixado e também fica em
    **Arquivos recentes**.
 

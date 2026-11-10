@@ -150,8 +150,23 @@ def montar_catalogo(sessao: dict) -> dict[str, str]:
 # Prompt
 # ---------------------------------------------------------------------------
 
+_CPF_FORMATADO = re.compile(r"(?<!\d)\d{3}\.(\d{3})\.(\d{3})-\d{2}(?!\d)")
+_CPF_DIGITOS = re.compile(r"(?<!\d)\d{3}(\d{3})(\d{3})\d{2}(?!\d)")
+
+
+def mascarar_cpfs(texto: str) -> str:
+    """CPF mascarado como no padrão da CGU (***.982.247-**): a IA não precisa do número para
+    comentar o achado, e o pedido pode ir para ferramentas fora da Justiça (modo "minha IA")."""
+    texto = _CPF_FORMATADO.sub(lambda m: f"***.{m.group(1)}.{m.group(2)}-**", texto)
+    return _CPF_DIGITOS.sub(lambda m: f"***{m.group(1)}{m.group(2)}**", texto)
+
+
 def montar_prompt(processo_id: str, achados: list[dict], catalogo: dict[str, str]) -> str:
-    """Monta o prompt enviado ao Gemini pelo navegador."""
+    """Monta o prompt enviado ao Gemini pelo navegador (CPFs mascarados)."""
+    return mascarar_cpfs(_montar_prompt(processo_id, achados, catalogo))
+
+
+def _montar_prompt(processo_id: str, achados: list[dict], catalogo: dict[str, str]) -> str:
     resumo_achados = [
         {
             "id": a["id"],
@@ -210,12 +225,18 @@ def _extrair_json(resposta: Any) -> dict:
     if not isinstance(resposta, str):
         raise ValueError("resposta em formato desconhecido")
 
-    texto = resposta.strip()
+    # Resposta colada de IA na web (modo "minha IA"): texto antes/depois, bloco ```json,
+    # aspas tipográficas e vírgula sobrando antes de } ou ]
+    texto = resposta.strip().replace("\u201c", '"').replace("\u201d", '"')
     inicio = texto.find("{")
     fim = texto.rfind("}")
     if inicio == -1 or fim <= inicio:
         raise ValueError("resposta não contém JSON")
-    return json.loads(texto[inicio:fim + 1])
+    trecho = texto[inicio:fim + 1]
+    try:
+        return json.loads(trecho)
+    except json.JSONDecodeError:
+        return json.loads(re.sub(r",\s*([}\]])", r"\1", trecho))
 
 
 def linguagem_conclusiva(texto: str) -> str | None:

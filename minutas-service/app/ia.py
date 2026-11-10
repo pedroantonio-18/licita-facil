@@ -146,13 +146,18 @@ PENDÊNCIAS:
 {pendencias}
 
 TERMO DE REFERÊNCIA E ANEXOS:
-<<<
 {tr}
->>>
 """
 
+TR_ANEXADO = ("Estão ANEXADOS a esta conversa (arquivos PDF). Leia-os por completo antes de responder; a evidência\n"
+              "deve ser copiada literalmente desses arquivos. Se os anexos não estiverem disponíveis, responda apenas\n"
+              '{"erro": "anexos não recebidos"}.')
 
-def montar_prompt(modelo: Modelo, itens: list[ItemPendente], texto_tr: str, dados: dict, tipo_nome: str) -> str:
+
+def montar_prompt(modelo: Modelo, itens: list[ItemPendente], texto_tr: str, dados: dict, tipo_nome: str,
+                  incluir_tr: bool = True) -> str:
+    """Pedido para a IA. `incluir_tr=False` (modo "minha IA"): o servidor anexa o PDF do TR na
+    conversa da ferramenta que usa, e o pedido copiado fica curto, sem o texto do TR."""
     catalogo = []
     for it in itens:
         catalogo.append({
@@ -164,7 +169,7 @@ def montar_prompt(modelo: Modelo, itens: list[ItemPendente], texto_tr: str, dado
     dados_txt = json.dumps({k: v for k, v in dados.items() if v and k not in ("signatario", "cargo")}, ensure_ascii=False)
     return INSTRUCOES.format(tipo_nome=tipo_nome, versao=modelo.versao or "?", dados=dados_txt,
                              pendencias=json.dumps(catalogo, ensure_ascii=False, indent=1),
-                             tr=texto_tr[:MAX_TR])
+                             tr=f"<<<\n{texto_tr[:MAX_TR]}\n>>>" if incluir_tr else TR_ANEXADO)
 
 
 # ---------------------------------------------------------------------------
@@ -180,14 +185,18 @@ class ResultadoIA:
 
 
 def _json(resposta: str) -> dict:
-    texto = (resposta or "").strip()
-    texto = re.sub(r"^```(?:json)?\s*|\s*```$", "", texto)
+    """Lê o JSON da resposta. Respostas coladas de IAs na web costumam vir com texto antes/depois
+    e dentro de bloco de código (```json ... ```), às vezes com aspas tipográficas."""
+    texto = (resposta or "").strip().replace("\u201c", '"').replace("\u201d", '"')
+    bloco = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", texto, re.S)
+    if bloco:
+        texto = bloco.group(1)
     try:
         return json.loads(texto)
     except json.JSONDecodeError:
         m = re.search(r"\{.*\}", texto, re.S)
         if m:
-            return json.loads(m.group(0))
+            return json.loads(re.sub(r",\s*([}\]])", r"\1", m.group(0)))   # tolera vírgula sobrando
         raise
 
 
@@ -234,6 +243,12 @@ def validar(itens: list[ItemPendente], resposta: str, texto_tr: str) -> Resultad
         dados = _json(resposta)
     except (json.JSONDecodeError, TypeError):
         r.descartes.append({"bloco": "", "motivo": "Resposta da IA não é um JSON válido"})
+        return r
+    if not isinstance(dados, dict):
+        r.descartes.append({"bloco": "", "motivo": "Resposta da IA não está no formato pedido"})
+        return r
+    if dados.get("erro"):
+        r.descartes.append({"bloco": "", "motivo": f"A IA informou: {str(dados['erro'])[:200]} — anexe o TR na conversa e tente de novo"})
         return r
 
     por_bloco = {it.bloco: it for it in itens}

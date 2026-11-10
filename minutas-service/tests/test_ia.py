@@ -209,3 +209,24 @@ def test_reescrever_para_negar_clausula_e_recusado():
         {"bloco": itens_me, "acao": "reescrever", "texto": "Para o lote único, a participação não é exclusiva a ME/EPP.",
          "motivo": "Lote único sem exclusividade", "evidencia": "Não há itens de participação exclusiva para ME/EPP"}]}), TR)
     assert "a ação é remover" in r.descartes[0]["motivo"]
+
+
+def test_pedido_sem_tr_para_anexar_na_conversa():
+    m, mi, itens = _contexto()
+    p = montar_prompt(m, itens, TR, {}, "Aviso", incluir_tr=False)
+    assert "jardinagem" not in p and "ANEXADOS a esta conversa" in p and "PENDÊNCIAS" in p
+    assert "jardinagem" in montar_prompt(m, itens, TR, {}, "Aviso")
+
+
+def test_resposta_colada_de_ia_na_web():
+    _, _, itens = _contexto()
+    lance = next(it for it in itens if it.texto.startswith("O lance"))
+    corpo = json.dumps({"decisoes": [{"bloco": lance.bloco, "acao": "preencher", "campos": {lance.campos[0]["id"]: "valor unitário"},
+                                      "motivo": "Lance pelo valor do lote", "evidencia": "O lance será ofertado pelo valor global do lote."}],
+                        "sem_informacao": []}, ensure_ascii=False)
+    colada = f"Claro! Segue a análise:\n\n```json\n{corpo}\n```\n\nSe precisar de algo mais, é só pedir."
+    assert len(validar(itens, colada, TR).aplicadas) == 1
+    com_virgula = corpo[:-1].replace("[]", "[],") + "}"          # vírgula sobrando antes do "}"
+    assert len(validar(itens, "texto antes " + com_virgula, TR).aplicadas) == 1
+    erro = validar(itens, '{"erro": "anexos não recebidos"}', TR)
+    assert "anexe o TR na conversa" in erro.descartes[0]["motivo"]

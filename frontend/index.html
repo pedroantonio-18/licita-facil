@@ -78,6 +78,13 @@
             </a>
           </li>
 
+          <li class="nav-item">
+            <a href="#enquadramento" class="nav-link">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+              <span>Enquadramento</span>
+            </a>
+          </li>
+
         </ul>
       </nav>
     </aside>
@@ -322,6 +329,13 @@
                   </fieldset>
 
                   <fieldset class="minutas-grupo">
+                    <legend>Perguntas sobre o caso</legend>
+                    <p class="conluio-modo">Cada resposta decide de uma vez as cláusulas do modelo da AGU ligadas a ela, sem precisar de IA.
+                      Deixe em “não responder” o que não souber; a cláusula fica nas pendências.</p>
+                    <div class="minutas-campos minutas-questionario"></div>
+                  </fieldset>
+
+                  <fieldset class="minutas-grupo">
                     <legend>Termo de Referência e anexos (para a IA)</legend>
                     <p class="conluio-modo">Opcional. Com o TR (e, se houver, ETP e minuta de contrato), o Gemini sugere as decisões das
                       pendências, cada uma com o trecho do TR que a sustenta — o sistema confere o trecho e você aprova ou desfaz.</p>
@@ -342,6 +356,17 @@
                 <span class="conluio-status minutas-status"></span>
                 <div class="minutas-resultado"></div>
 
+              </div>
+            </section>
+
+            <section class="content-section" id="enquadramento">
+              <div class="conluio-panel">
+                <form class="minutas-form enq-form" autocomplete="off"></form>
+                <div class="conluio-actions">
+                  <button type="button" class="conluio-btn-primary" id="enq-gerar">Gerar Informação</button>
+                </div>
+                <span class="conluio-status enq-status"></span>
+                <div class="enq-resultado"></div>
               </div>
             </section>
 

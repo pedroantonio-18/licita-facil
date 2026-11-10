@@ -26,7 +26,8 @@ function initNavigation() {
     'gemini-test': 'Playground Gemini',
     'conluio': 'Análise de Conluio',
     'juntada': 'Juntada de Documentos',
-    'minutas': 'Minutas'
+    'minutas': 'Minutas',
+    'enquadramento': 'Enquadramento de Despesas'
   };
 
   function navigateTo(targetId) {
