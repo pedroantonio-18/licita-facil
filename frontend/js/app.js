@@ -6,6 +6,7 @@ import { initExcelConverter } from './excelConverter.js';
 import { initGeminiTest } from './geminiTest.js';
 import { initConluio } from './conluio.js';
 import { initJuntada } from './juntada.js';
+import { initMinutas } from './minutas.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   initSidebar();
@@ -16,4 +17,5 @@ document.addEventListener('DOMContentLoaded', () => {
   initGeminiTest();
   initConluio();
   initJuntada();
+  initMinutas();
 });

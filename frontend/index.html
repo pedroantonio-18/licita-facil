@@ -71,6 +71,13 @@
             </a>
           </li>
 
+          <li class="nav-item">
+            <a href="#minutas" class="nav-link">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+              <span>Minutas</span>
+            </a>
+          </li>
+
         </ul>
       </nav>
     </aside>
@@ -289,6 +296,51 @@
 
                 <span class="conluio-status juntada-status"></span>
                 <div class="juntada-resultados"></div>
+
+              </div>
+            </section>
+
+            <section class="content-section" id="minutas">
+              <div class="conluio-panel">
+
+                <div class="conluio-config">
+                  <label class="conluio-label" for="minutas-modelo">Minuta</label>
+                  <select id="minutas-modelo" class="conluio-input minutas-curto"></select>
+                  <p class="conluio-modo minutas-modelo-info"></p>
+                </div>
+
+                <form class="minutas-form" autocomplete="off">
+                  <fieldset class="minutas-grupo">
+                    <legend>Dados do processo</legend>
+                    <div class="minutas-campos"></div>
+                  </fieldset>
+
+                  <fieldset class="minutas-grupo">
+                    <legend>Temas do modelo da AGU que se aplicam ao caso</legend>
+                    <p class="conluio-modo">Desmarcados, as cláusulas desses temas saem da minuta e a numeração é refeita.</p>
+                    <div class="minutas-temas"></div>
+                  </fieldset>
+
+                  <fieldset class="minutas-grupo">
+                    <legend>Termo de Referência e anexos (para a IA)</legend>
+                    <p class="conluio-modo">Opcional. Com o TR (e, se houver, ETP e minuta de contrato), o Gemini sugere as decisões das
+                      pendências, cada uma com o trecho do TR que a sustenta — o sistema confere o trecho e você aprova ou desfaz.</p>
+                    <input type="file" class="minutas-tr-input" accept=".pdf,application/pdf" multiple />
+                    <ul class="minutas-tr-lista"></ul>
+                  </fieldset>
+
+                  <details class="minutas-grupo minutas-jf">
+                    <summary>Dados da unidade e assinatura</summary>
+                    <div class="minutas-campos-jf"></div>
+                  </details>
+                </form>
+
+                <div class="conluio-actions">
+                  <button type="button" class="conluio-btn-primary" id="minutas-montar">Montar minuta</button>
+                </div>
+
+                <span class="conluio-status minutas-status"></span>
+                <div class="minutas-resultado"></div>
 
               </div>
             </section>
