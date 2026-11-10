@@ -103,7 +103,7 @@ const CAMPOS_UNIDADE = [
     ['cargo', 'Cargo de quem assina', 'text', 'Supervisor(a) da Seção'],
 ];
 
-const ROTULO_ORIGEM = { formulario: 'formulário', servidor: 'servidor', ia: 'IA', misto: 'formulário/IA' };
+const ROTULO_ORIGEM = { formulario: 'formulário', servidor: 'servidor', ia: 'IA', misto: 'formulário/IA', questionario: 'questionário' };
 
 // Campo vermelho que é lacuna a preencher (o resto é trecho opcional: manter ou retirar)
 // (inclui valor sugerido pela AGU, ex. "60 (sessenta)" — vem preenchido para confirmar ou trocar)
@@ -135,6 +135,25 @@ function decisoesVazias() {
     return { remover: {}, textos: {}, campos: {}, manter: [], motivos: {}, origem: {} };
 }
 
+async function copiarTexto(texto) {
+    try {
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(texto);
+            return true;
+        }
+    } catch { /* cai no método antigo */ }
+    const area = document.createElement('textarea');
+    area.value = texto;
+    area.setAttribute('readonly', '');
+    area.style.position = 'fixed';
+    area.style.opacity = '0';
+    document.body.appendChild(area);
+    area.select();
+    const ok = document.execCommand('copy');
+    area.remove();
+    return ok;
+}
+
 export function initMinutas() {
     const section = document.getElementById('minutas');
     if (!section) return;
@@ -144,6 +163,7 @@ export function initMinutas() {
     const camposDiv = section.querySelector('.minutas-campos');
     const camposJfDiv = section.querySelector('.minutas-campos-jf');
     const temasDiv = section.querySelector('.minutas-temas');
+    const questionarioDiv = section.querySelector('.minutas-questionario');
     const montarBtn = section.querySelector('#minutas-montar');
     const statusEl = section.querySelector('.minutas-status');
     const resultadoDiv = section.querySelector('.minutas-resultado');
@@ -156,6 +176,12 @@ export function initMinutas() {
     let montando = false;
     let textoTR = '';           // texto do TR e anexos, extraído pelo minutas-service
     let iaInfo = null;          // última rodada da IA: {aplicadas, descartes, sem_informacao, modelo}
+    // Modo "minha IA": o servidor leva o pedido à ferramenta que já usa e cola a resposta aqui
+    let manualAberto = false;
+    let respostaManual = '';
+    let incluirTR = false;
+    let pedidoManual = null;    // pedido já buscado: o botão copia na hora (o navegador exige o clique)
+    let ferramenta = (() => { try { return localStorage.getItem('minutas.ferramenta') || 'ChatGPT'; } catch { return 'ChatGPT'; } })();
 
     function setStatus(msg, tipo = '') {
         statusEl.textContent = msg;
@@ -196,6 +222,16 @@ export function initMinutas() {
             .filter(([t]) => m.temas.includes(t))
             .map(([t, nome]) => `<label class="conluio-check"><input type="checkbox" data-tema="${t}"> ${esc(nome)}</label>`)
             .join('') || '<p class="conluio-modo">Este modelo não tem temas opcionais.</p>';
+        const respostasAntes = respostasQuestionario();
+        questionarioDiv.innerHTML = (m.perguntas || []).map(p => `
+            <label class="minutas-campo" for="minutas-q-${esc(p.id)}">
+                <span class="conluio-label">${esc(p.texto)}</span>
+                <select id="minutas-q-${esc(p.id)}" data-pergunta="${esc(p.id)}" class="conluio-input">
+                    <option value="">— não responder —</option>
+                    ${p.opcoes.map(([v, r]) => `<option value="${esc(v)}"${respostasAntes[p.id] === v ? ' selected' : ''}>${esc(r)}</option>`).join('')}
+                </select>
+                ${p.ajuda ? `<span class="conluio-modo">${esc(p.ajuda)}</span>` : ''}
+            </label>`).join('');
         modeloInfo.textContent = `Modelo da AGU, versão ${m.versao || 'não informada'} (indicada no rodapé do arquivo).`;
     }
 
@@ -227,6 +263,12 @@ export function initMinutas() {
         Object.keys(dados).filter(k => k.endsWith('__iso')).forEach(k => delete dados[k]);
         Object.keys(dados).forEach(k => { if (dados[k] === '') delete dados[k]; });
         return dados;
+    }
+
+    function respostasQuestionario() {
+        const r = {};
+        section.querySelectorAll('[data-pergunta]').forEach(el => { if (el.value) r[el.dataset.pergunta] = el.value; });
+        return r;
     }
 
     function temasMarcados() {
@@ -310,7 +352,8 @@ export function initMinutas() {
     async function sugerirComIA() {
         const m = modeloAtual();
         if (!m || !ultimo) return;
-        const base = { modelo_id: m.id, dados: dadosParaEnvio(), temas: temasMarcados(), decisoes, texto_tr: textoTR };
+        const base = { modelo_id: m.id, dados: dadosParaEnvio(), temas: temasMarcados(), respostas: respostasQuestionario(),
+                       decisoes, texto_tr: textoTR };
         const btn = resultadoDiv.querySelector('#minutas-ia');
         if (btn) btn.disabled = true;
         try {
@@ -319,20 +362,75 @@ export function initMinutas() {
             if (!pedido.aplicavel) { setStatus('Não há pendências para a IA decidir.', 'success'); return; }
             setStatus(`Enviando ${pedido.pendencias} pendência(s) e o TR ao Gemini…`, 'loading');
             const { texto, modelo } = await chamarGemini(pedido.prompt, msg => setStatus(msg, 'loading'));
-            setStatus('Conferindo as sugestões da IA…', 'loading');
-            const v = await postar('/minutas/ia/validar', { ...base, resposta: texto });
-            // Decisões do servidor prevalecem: a IA só preenche o que ainda está em aberto
-            for (const k of ['remover', 'textos', 'campos', 'motivos', 'origem']) {
-                for (const [id, valor] of Object.entries(v.decisoes[k])) {
-                    if (decisoes.origem[id] !== 'servidor') decisoes[k][id] = valor;
-                }
-            }
-            v.decisoes.manter.forEach(id => { if (!decisoes.manter.includes(id)) decisoes.manter.push(id); });
-            iaInfo = { ...v, modelo };
-            await montar();
+            await aplicarResposta(base, texto, modelo);
         } catch (err) {
             setStatus(err.message === 'Failed to fetch' ? 'Serviço de minutas indisponível.' : err.message, 'error');
             if (btn) btn.disabled = false;
+        }
+    }
+
+    /** Confere a resposta da IA no minutas-service e aplica o que passou. */
+    async function aplicarResposta(base, texto, modelo) {
+        setStatus('Conferindo as sugestões da IA…', 'loading');
+        const v = await postar('/minutas/ia/validar', { ...base, resposta: texto });
+        // Decisões do servidor prevalecem: a IA só preenche o que ainda está em aberto
+        for (const k of ['remover', 'textos', 'campos', 'motivos', 'origem']) {
+            for (const [id, valor] of Object.entries(v.decisoes[k])) {
+                if (decisoes.origem[id] !== 'servidor') decisoes[k][id] = valor;
+            }
+        }
+        v.decisoes.manter.forEach(id => { if (!decisoes.manter.includes(id)) decisoes.manter.push(id); });
+        iaInfo = { ...v, modelo };
+        await montar();
+        if (!v.aplicadas.length && v.descartes.length && !v.descartes[0].bloco) {
+            setStatus(v.descartes[0].motivo, 'error');       // ex.: resposta fora do formato
+        }
+    }
+
+    function basePedidoIA() {
+        const m = modeloAtual();
+        return { modelo_id: m.id, dados: dadosParaEnvio(), temas: temasMarcados(), respostas: respostasQuestionario(),
+                 decisoes, texto_tr: textoTR };
+    }
+
+    async function atualizarPedidoManual() {
+        pedidoManual = null;
+        const area = resultadoDiv.querySelector('#minutas-pedido-texto');
+        if (!manualAberto || textoTR.trim().length < 200) {
+            if (area) area.value = 'Anexe o Termo de Referência acima: o sistema usa o texto dele para conferir a resposta da IA.';
+            return;
+        }
+        try {
+            const pedido = await postar('/minutas/ia/prompt', { ...basePedidoIA(), incluir_tr: incluirTR });
+            pedidoManual = pedido.aplicavel ? pedido : { prompt: '', pendencias: 0 };
+            if (area) area.value = pedidoManual.prompt || 'Não há pendências para a IA decidir.';
+        } catch (err) {
+            if (area) area.value = `Não foi possível preparar o pedido: ${err.message}`;
+        }
+    }
+
+    async function copiarPedido() {
+        if (!pedidoManual) await atualizarPedidoManual();
+        if (!pedidoManual?.prompt) {
+            setStatus(textoTR.trim().length < 200
+                ? 'Anexe o Termo de Referência também aqui: o sistema usa o texto dele para conferir a resposta da IA.'
+                : 'Não há pendências para a IA decidir.', textoTR.trim().length < 200 ? 'error' : 'success');
+            return;
+        }
+        const ok = await copiarTexto(pedidoManual.prompt);
+        setStatus(ok ? `Pedido copiado (${pedidoManual.pendencias} pendência(s)). Cole na sua IA${incluirTR ? '' : ' e anexe o PDF do TR'}.`
+                     : 'Não foi possível copiar automaticamente: selecione o texto do pedido abaixo e use Ctrl+C.', ok ? 'success' : 'error');
+    }
+
+    async function aplicarRespostaManual() {
+        const texto = respostaManual.trim();
+        if (!texto) { setStatus('Cole a resposta da IA no campo antes de aplicar.', 'error'); return; }
+        try {
+            await aplicarResposta(basePedidoIA(), texto, `${ferramenta} (copiar e colar)`);
+            respostaManual = '';
+            if (ultimo) desenharResultado();
+        } catch (err) {
+            setStatus(err.message === 'Failed to fetch' ? 'Serviço de minutas indisponível.' : err.message, 'error');
         }
     }
 
@@ -346,7 +444,8 @@ export function initMinutas() {
             const r = await fetch(`${MINUTAS}/minutas/montar`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ modelo_id: m.id, dados: dadosParaEnvio(), temas: temasMarcados(), decisoes }),
+                body: JSON.stringify({ modelo_id: m.id, dados: dadosParaEnvio(), temas: temasMarcados(),
+                                       respostas: respostasQuestionario(), decisoes }),
             });
             const corpo = await r.json();
             if (!r.ok) throw new Error(corpo.detail || 'Falha ao montar');
@@ -481,7 +580,8 @@ export function initMinutas() {
                     <p class="minutas-depois">${esc(b.texto)}</p>
                 </div>
                 <p class="conluio-modo">${esc(b.referencias?.length ? `Numeração citada: ${b.referencias.join(', ')}` : b.motivo)}</p>
-                ${['servidor', 'ia'].includes(b.origem) ? `<button type="button" class="juntada-link-btn" data-acao="desfazer" data-id="${b.id}">Desfazer</button>` : ''}
+                ${['servidor', 'ia'].includes(b.origem) ? `<button type="button" class="juntada-link-btn" data-acao="desfazer" data-id="${b.id}">Desfazer</button>`
+                  : b.origem === 'questionario' ? '<span class="conluio-modo">Para desfazer, mude a resposta no questionário.</span>' : ''}
             </li>`).join('');
         const removidos = ultimo.removidos.filter(r => r.texto.trim() && r.motivo !== 'Separador "OU" do modelo').map(r => `
             <li class="minutas-alteracao">
@@ -489,19 +589,51 @@ export function initMinutas() {
                 <span class="juntada-situacao juntada-faltando">Removido</span>
                 <p class="minutas-antes">${esc(r.texto)}</p>
                 <p class="conluio-modo">${esc(r.motivo)}</p>
-                ${decisoes.remover[r.id] ? `<button type="button" class="juntada-link-btn" data-acao="desfazer" data-id="${r.id}">Desfazer</button>` : ''}
+                ${decisoes.remover[r.id] ? `<button type="button" class="juntada-link-btn" data-acao="desfazer" data-id="${r.id}">Desfazer</button>`
+                  : r.motivo.startsWith('Questionário') ? `<button type="button" class="juntada-link-btn" data-acao="manter" data-id="${r.id}">Manter esta cláusula</button>` : ''}
             </li>`).join('');
         return { linhas, removidos, total: alterados.length };
     }
 
     function botaoIA() {
-        const semChave = !chaveGemini();
+        const temChave = !!chaveGemini();
         const semTR = textoTR.trim().length < 200;
-        const dica = semChave ? 'Configure a chave do Gemini no Playground Gemini'
-            : semTR ? 'Anexe o Termo de Referência acima' : 'O TR vai ao Gemini pela sua chave';
-        return `<span class="minutas-ia-acao"><button type="button" class="conluio-btn-primary" id="minutas-ia"
-                    ${semChave || semTR ? 'disabled' : ''}>Sugerir com IA</button>
-                <span class="conluio-modo">${esc(dica)}</span></span>`;
+        const dica = semTR ? 'Anexe o Termo de Referência acima' : temChave ? 'O TR vai ao Gemini pela chave configurada' : '';
+        return `<span class="minutas-ia-acao">
+                ${temChave ? `<button type="button" class="conluio-btn-primary" id="minutas-ia" ${semTR ? 'disabled' : ''}>Sugerir com IA</button>` : ''}
+                <button type="button" class="${temChave ? 'conluio-btn-secondary' : 'conluio-btn-primary'}" id="minutas-manual">
+                    ${manualAberto ? 'Fechar “usar minha IA”' : 'Usar minha IA (copiar e colar)'}</button>
+                ${dica ? `<span class="conluio-modo">${esc(dica)}</span>` : ''}</span>`;
+    }
+
+    function painelManualHtml() {
+        if (!manualAberto) return '';
+        const opcoes = ['ChatGPT', 'Claude', 'Gemini', 'Copilot', 'Outra'];
+        return `<section class="minutas-secao minutas-manual">
+            <h3>Usar a sua IA</h3>
+            <p class="minutas-aviso-ia">Use apenas ferramentas de IA autorizadas pelo TRF1. Ferramentas gratuitas podem usar
+               o conteúdo enviado para outros fins.</p>
+            <ol>
+                <li>Clique em <strong>Copiar pedido</strong>.</li>
+                <li>Abra a IA que você usa, ${incluirTR ? '' : '<strong>anexe o PDF do Termo de Referência</strong> (e anexos) e '}cole o pedido.</li>
+                <li>Copie a resposta inteira da IA e cole no campo abaixo. O sistema confere cada sugestão antes de aplicar.</li>
+            </ol>
+            <div class="minutas-manual-linha">
+                <label class="minutas-campo-inline"><span>Ferramenta</span>
+                    <select class="conluio-input" id="minutas-ferramenta">${opcoes.map(o =>
+                        `<option${o === ferramenta ? ' selected' : ''}>${o}</option>`).join('')}</select></label>
+                <label class="conluio-check"><input type="checkbox" id="minutas-incluir-tr"${incluirTR ? ' checked' : ''}>
+                    Colar o texto do TR no pedido (para IA que não aceita anexo)</label>
+                <button type="button" class="conluio-btn-secondary" id="minutas-copiar-pedido">Copiar pedido</button>
+            </div>
+            <details><summary>Ver o pedido</summary>
+                <textarea class="conluio-input" id="minutas-pedido-texto" rows="6" readonly>Preparando o pedido…</textarea></details>
+            <textarea class="conluio-input" id="minutas-resposta" rows="6"
+                placeholder="Cole aqui a resposta da IA (pode colar tudo, inclusive o texto antes e depois do JSON)">${esc(respostaManual)}</textarea>
+            <div class="conluio-actions">
+                <button type="button" class="conluio-btn-primary" id="minutas-aplicar-resposta">Aplicar resposta</button>
+            </div>
+        </section>`;
     }
 
     function iaHtml() {
@@ -539,6 +671,7 @@ export function initMinutas() {
             ${iaHtml()}
             ${r.pendencias || r.opcionais ? `<section class="minutas-secao">
                 <div class="minutas-previa-topo"><h3>Pendências</h3>${botaoIA()}</div>
+                ${painelManualHtml()}
                 <ul class="minutas-lista">${pend}</ul></section>` : ''}
             ${opcionais.length ? `<section class="minutas-secao">
                 <div class="minutas-previa-topo"><h3>Cláusulas opcionais do modelo da AGU (${opcionais.length})</h3>
@@ -559,6 +692,16 @@ export function initMinutas() {
         resultadoDiv.querySelectorAll('[data-acao]').forEach(btn => btn.addEventListener('click', () => acao(btn)));
         resultadoDiv.querySelector('#minutas-copiar').addEventListener('click', copiar);
         resultadoDiv.querySelector('#minutas-ia')?.addEventListener('click', sugerirComIA);
+        resultadoDiv.querySelector('#minutas-manual')?.addEventListener('click', () => { manualAberto = !manualAberto; desenharResultado(); });
+        resultadoDiv.querySelector('#minutas-copiar-pedido')?.addEventListener('click', copiarPedido);
+        resultadoDiv.querySelector('#minutas-aplicar-resposta')?.addEventListener('click', aplicarRespostaManual);
+        resultadoDiv.querySelector('#minutas-resposta')?.addEventListener('input', e => { respostaManual = e.target.value; });
+        resultadoDiv.querySelector('#minutas-incluir-tr')?.addEventListener('change', e => { incluirTR = e.target.checked; desenharResultado(); });
+        if (manualAberto) atualizarPedidoManual();
+        resultadoDiv.querySelector('#minutas-ferramenta')?.addEventListener('change', e => {
+            ferramenta = e.target.value;
+            try { localStorage.setItem('minutas.ferramenta', ferramenta); } catch { /* sem armazenamento */ }
+        });
         resultadoDiv.querySelector('#minutas-manter-todas')?.addEventListener('click', () => {
             opcionais.forEach(p => {
                 if (!decisoes.manter.includes(p.bloco)) decisoes.manter.push(p.bloco);

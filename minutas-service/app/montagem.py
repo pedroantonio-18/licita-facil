@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import copy
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from app.modelo import NOMES_TEMAS, Bloco, Modelo, Trecho, numerar
 
@@ -175,10 +175,15 @@ def montar(modelo: Modelo, decisoes: Decisoes) -> Minuta:
             continue                                  # o sumário é refeito a partir dos títulos finais
         num = numeros_modelo.get(b.id, "")
         if corte is not None:
-            if b.nivel and b.nivel > corte[0] or b.tipo == "tabela":
+            if b.nivel and b.nivel > corte[0] and (b.id in decisoes.manter or b.id in decisoes.textos):
+                # subitem que fica por decisão própria: sobe para o lugar do item removido
+                # (ex.: "Será concedido tratamento favorecido às ME/EPP" sem a exclusividade por item)
+                b = replace(b, nivel=b.nivel - (b.nivel - corte[0]))
+                corte = None
+            elif b.nivel and b.nivel > corte[0] or b.tipo == "tabela":
                 removidos.append(Removido(b.id, num, b.texto, f"Subitem do item {corte[1]} do modelo, que foi removido"))
                 continue
-            if b.tipo != "ou":
+            elif b.tipo != "ou":
                 corte = None
         if b.tema_integral and b.tema_integral in excluidos and b.id not in decisoes.textos and b.id not in decisoes.manter:
             # (bloco reescrito ou mantido por decisão não sai pelo tema: ex. valor do OBJETO na capa,

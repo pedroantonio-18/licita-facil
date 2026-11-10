@@ -21,6 +21,7 @@ from app.ia import montar_prompt, pendencias_para_ia, validar
 from app.modelo import NOMES_TEMAS, Modelo, ler_modelo, numerar
 from app.montagem import Decisoes, Minuta, montar
 from app.preenchimento import DADOS_JF, DadosCaso, preencher
+from app.questionario import aplicar as aplicar_questionario, perguntas_para
 from app.saida_sei import html_sei
 
 log = logging.getLogger(__name__)
@@ -64,7 +65,7 @@ def _modelo(modelo_id: str) -> Modelo:
 
 def _info(modelo_id: str, m: Modelo) -> dict:
     return {"id": modelo_id, "tipo": m.tipo, "tipo_nome": TIPOS[m.tipo], "versao": m.versao,
-            "temas": sorted({t for b in m.blocos for t in b.temas})}
+            "temas": sorted({t for b in m.blocos for t in b.temas}), "perguntas": perguntas_para(m.tipo)}
 
 
 @router.get("/config")
@@ -110,6 +111,7 @@ class PedidoMontagem(BaseModel):
     modelo_id: str
     dados: dict = Field(default_factory=dict)
     temas: list[str] = Field(default_factory=list)
+    respostas: dict[str, str] = Field(default_factory=dict)     # questionário do caso
     decisoes: DecisoesEntrada = Field(default_factory=DecisoesEntrada)
 
 
@@ -123,7 +125,8 @@ def _dados(entrada: dict) -> DadosCaso:
 
 def _decisoes(m: Modelo, pedido: PedidoMontagem) -> Decisoes:
     temas = {t for t in pedido.temas if t in NOMES_TEMAS}
-    base = preencher(m, _dados(pedido.dados), temas)
+    base = preencher(m, _dados(pedido.dados), temas).juntar(
+        aplicar_questionario(m, pedido.respostas, pedido.dados, temas))
     ids = {b.id for b in m.blocos}
     campos = {c.id for b in m.blocos for c in b.campos}
     e = pedido.decisoes
@@ -136,6 +139,11 @@ def _decisoes(m: Modelo, pedido: PedidoMontagem) -> Decisoes:
         motivos={k: v for k, v in e.motivos.items() if k in ids or k in campos},
         origem={k: v for k, v in e.origem.items() if k in ids or k in campos},
     )
+    # O servidor (ou a IA) pode desfazer o que o questionário decidiu: manter ou reescrever
+    # vale mais que a remoção automática
+    for bid in (*extra.manter, *extra.textos):
+        if base.origem.get(bid) == "questionario":
+            base.remover.pop(bid, None)
     return base.juntar(extra)
 
 
@@ -211,6 +219,7 @@ async def texto_pdf(arquivos: list[UploadFile] = File(...)):
 class PedidoIA(PedidoMontagem):
     texto_tr: str = ""
     resposta: str = ""
+    incluir_tr: bool = True      # False no modo "minha IA" com o TR anexado na conversa
 
 
 def _contexto_ia(pedido: PedidoIA):
@@ -229,7 +238,7 @@ async def prompt_ia(pedido: PedidoIA):
     if not itens:
         return {"aplicavel": False, "pendencias": 0}
     return {"aplicavel": True, "pendencias": len(itens),
-            "prompt": montar_prompt(m, itens, pedido.texto_tr, pedido.dados, TIPOS[m.tipo])}
+            "prompt": montar_prompt(m, itens, pedido.texto_tr, pedido.dados, TIPOS[m.tipo], pedido.incluir_tr)}
 
 
 @router.post("/ia/validar")
